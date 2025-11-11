@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo Premium - Zapatos de Alta Calidad</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1a1a2e;
+            --secondary: #16213e;
+            --accent: #0f3460;
+            --gold: #d4af37;
+            --light: #eaeaea;
+            --white: #ffffff;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: var(--white);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(212, 175, 55, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(15, 52, 96, 0.2) 0%, transparent 50%);
+            pointer-events: none;
+            animation: backgroundPulse 15s ease-in-out infinite;
+        }
+
+        @keyframes backgroundPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 3rem;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .brand-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--gold), #f4e4a6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.4);
+        }
+
+        .brand-text h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--gold), #fff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+        }
+
+        .brand-text p {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .search-bar {
+            position: relative;
+            max-width: 600px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1.2rem 3.5rem 1.2rem 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(212, 175, 55, 0.3);
+            border-radius: 50px;
+            color: var(--white);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--gold);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gold);
+            font-size: 1.3rem;
+        }
+
+        .stats-bar {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+        }
+
+        .stat-text h3 {
+            font-size: 1.5rem;
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        .stat-text p {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .products-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 3rem;
+        }
+
+        .product-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 25px;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .product-card:hover {
+            transform: translateY(-15px);
+            box-shadow: 0 25px 60px rgba(212, 175, 55, 0.3);
+            border-color: var(--gold);
+        }
+
+        .product-card:hover::before {
+            opacity: 1;
+        }
+
+        .product-image {
+            height: 350px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .product-card:hover .product-image img {
+            transform: scale(1.1);
+        }
+
+        .product-image .placeholder-icon {
+            font-size: 8rem;
+            filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
+        }
+
+        .product-badge {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: var(--gold);
+            color: var(--primary);
+            padding: 0.5rem 1.2rem;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        .product-info {
+            padding: 2.5rem;
+        }
+
+        .product-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 1rem;
+            line-height: 1.3;
+        }
+
+        .product-description {
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .product-details {
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .price-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .price-label {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.3rem;
+        }
+
+        .product-price {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--gold);
+            font-family: 'Playfair Display', serif;
+            line-height: 1;
+        }
+
+        .product-sizes {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.8rem;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .whatsapp-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            box-shadow: 0 8px 25px rgba(37, 211, 102, 0.3);
+            width: 100%;
+            justify-content: center;
+        }
+
+        .whatsapp-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(37, 211, 102, 0.5);
+            background: linear-gradient(135deg, #128C7E, #075E54);
+        }
+
+        .whatsapp-float {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 40px rgba(37, 211, 102, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 999;
+            animation: float 3s ease-in-out infinite;
+            text-decoration: none;
+        }
+
+        .whatsapp-float:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 50px rgba(37, 211, 102, 0.6);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 6rem 2rem;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(212, 175, 55, 0.2);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 2rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 6rem 2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .empty-icon {
+            font-size: 6rem;
+            margin-bottom: 2rem;
+            opacity: 0.3;
+        }
+
+        .empty-state h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--gold);
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
+        }
+
+        .footer {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(212, 175, 55, 0.2);
+            padding: 3rem;
+            text-align: center;
+            margin-top: 4rem;
+        }
+
+        .footer p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            line-height: 1.8;
+        }
+
+        .footer-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(212, 175, 55, 0.1);
+            padding: 0.5rem 1.5rem;
+            border-radius: 30px;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                padding: 1.5rem;
+            }
+
+            .brand-text h1 {
+                font-size: 1.8rem;
+            }
+
+            .stats-bar {
+                padding: 1.5rem;
+                justify-content: center;
+            }
+
+            .products-container {
+                padding: 1.5rem;
+            }
+
+            .products-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .product-price {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="brand">
+                <div class="brand-icon">👟</div>
+                <div class="brand-text">
+                    <h1>Premium Collection</h1>
+                    <p>Calzado de Lujo</p>
+                </div>
+            </div>
+            <div class="search-bar">
+                <input 
+                    type="text" 
+                    class="search-input" 
+                    id="searchInput"
+                    placeholder="Buscar por nombre, marca, estilo..."
+                >
+                <span class="search-icon">🔍</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-icon">📦</span>
+            <div class="stat-text">
+                <h3 id="productCount">0</h3>
+                <p>Productos</p>
+            </div>
+        </div>
+        <div class="stat-item">
+            <span class="stat-icon">⭐</span>
+            <div class="stat-text">
+                <h3>100%</h3>
+                <p>Calidad</p>
+            </div>
+        </div>
+        <div class="stat-item">
+            <span class="stat-icon">🚚</span>
+            <div class="stat-text">
+                <h3>24h</h3>
+                <p>Envío Rápido</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="products-container">
+        <div id="productsGrid" class="products-grid">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p class="loading-text">Cargando catálogo...</p>
+            </div>
+        </div>
+    </div>
+
+    <a href="#" class="whatsapp-float" onclick="contactarVendedor(event)">
+        <span style="font-size: 2.5rem;">💬</span>
+    </a>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p>Catálogo administrado vía Telegram Bot</p>
+            <p style="margin-top: 0.5rem; font-size: 0.8rem;">Actualización automática en tiempo real</p>
+            <div class="footer-badge">
+                <span>🔒</span>
+                <span>Sistema Seguro</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // ⚙️ CONFIGURACIÓN - Cambia estos valores
+        const CONFIG = {
+            whatsappNumbers: [
+                '+573001234567',  // Número principal
+                '+573007654321'   // Número secundario
+            ],
+            autoRefreshSeconds: 30  // Auto-actualizar cada 30 segundos
+        };
+
+        // Variables globales
+        let allProducts = [];
+        let filteredProducts = [];
+
+        // Inicializar
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadProducts();
+            setupSearch();
+            startAutoRefresh();
+        });
+
+        // Cargar productos desde storage
+        async function loadProducts() {
+            try {
+                // Obtener lista de productos
+                const listResult = await window.storage.list('producto:', true);
+                
+                if (!listResult || !listResult.keys || listResult.keys.length === 0) {
+                    allProducts = [];
+                    filteredProducts = [];
+                    renderProducts();
+                    return;
+                }
+
+                // Cargar cada producto
+                const productos = [];
+                for (const key of listResult.keys) {
+                    try {
+                        const result = await window.storage.get(key, true);
+                        if (result && result.value) {
+                            const producto = JSON.parse(result.value);
+                            productos.push(producto);
+                        }
+                    } catch (err) {
+                        console.log(`Producto ${key} no existe o error al cargar`);
+                    }
+                }
+
+                // Ordenar por fecha (más recientes primero)
+                productos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+                allProducts = productos;
+                filteredProducts = [...allProducts];
+                renderProducts();
+
+            } catch (error) {
+                console.error('Error cargando productos:', error);
+                showEmptyState();
+            }
+        }
+
+        // Renderizar productos
+        function renderProducts() {
+            const grid = document.getElementById('productsGrid');
+            const productCount = document.getElementById('productCount');
+            
+            productCount.textContent = filteredProducts.length;
+            
+            if (filteredProducts.length === 0) {
+                showEmptyState();
+                return;
+            }
+            
+            grid.innerHTML = filteredProducts.map(producto => `
+                <div class="product-card">
+                    <div class="product-image">
+                        ${producto.imagen 
+                            ? `<img src="${producto.imagen}" alt="${producto.nombre}" onerror="this.parentElement.innerHTML='<div class=\\'placeholder-icon\\'>👟</div>'">`
+                            : '<div class="placeholder-icon">👟</div>'
+                        }
+                        <div class="product-badge">Premium</div>
+                    </div>
+                    <div class="product-info">
+                        <h3 class="product-name">${escapeHtml(producto.nombre)}</h3>
+                        ${producto.descripcion 
+                            ? `<p class="product-description">${escapeHtml(producto.descripcion)}</p>` 
+                            : ''
+                        }
+                        <div class="product-details">
+                            <div class="price-section">
+                                <div class="price-label">Precio</div>
+                                <div class="product-price">$${parseFloat(producto.precio).toFixed(2)}</div>
+                                ${producto.tallas 
+                                    ? `<div class="product-sizes">
+                                        <span>📏</span>
+                                        <span>Tallas: ${escapeHtml(producto.tallas)}</span>
+                                       </div>` 
+                                    : ''
+                                }
+                            </div>
+                            <a href="#" class="whatsapp-btn" onclick="consultarProducto(event, '${escapeHtml(producto.nombre)}', ${producto.precio}, '${escapeHtml(producto.tallas || '')}')">
+                                <span>💬</span>
+                                <span>Consultar por WhatsApp</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Estado vacío
+        function showEmptyState() {
+            const grid = document.getElementById('productsGrid');
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📦</div>
+                    <h2>Catálogo en construcción</h2>
+                    <p>Próximamente agregaremos productos exclusivos. ¡Vuelve pronto!</p>
+                </div>
+            `;
+            document.getElementById('productCount').textContent = '0';
+        }
+
+        // Búsqueda
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase().trim();
+                
+                if (searchTerm === '') {
+                    filteredProducts = [...allProducts];
+                } else {
+                    filteredProducts = allProducts.filter(producto => 
+                        producto.nombre.toLowerCase().includes(searchTerm) ||
+                        (producto.descripcion && producto.descripcion.toLowerCase().includes(searchTerm)) ||
+                        (producto.tallas && producto.tallas.toLowerCase().includes(searchTerm))
+                    );
+                }
+                renderProducts();
+            });
+        }
+
+        // Auto-refresh
+        function startAutoRefresh() {
+            setInterval(() => {
+                loadProducts();
+            }, CONFIG.autoRefreshSeconds * 1000);
+        }
+
+        // WhatsApp
+        function getRandomPhone() {
+            return CONFIG.whatsappNumbers[Math.floor(Math.random() * CONFIG.whatsappNumbers.length)];
+        }
+
+        function consultarProducto(event, nombre, precio, tallas) {
+            event.preventDefault();
+            const phone = getRandomPhone();
+            const mensaje = `¡Hola! 👋 Estoy interesado en:\n\n👟 *${nombre}*\n💰 Precio: $${parseFloat(precio).toFixed(2)}\n${tallas ? `📏 Tallas: ${tallas}\n` : ''}\n¿Está disponible?`;
+            window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(mensaje)}`, '_blank');
+        }
+
+        function contactarVendedor(event) {
+            event.preventDefault();
+            const phone = getRandomPhone();
+            const mensaje = '¡Hola! 👋 Vi su catálogo de zapatos y me gustaría recibir más información.';
+            window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(mensaje)}`, '_blank');
+        }
+
+        // Utilidades
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
