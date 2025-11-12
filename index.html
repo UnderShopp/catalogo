@@ -579,11 +579,16 @@
 
   <script>
     const CONFIG = {
-      whatsappNumbers: ['+573001234567', '+573007654321'],
-      autoRefreshSeconds: 30
-    };
+      whatsappNumbers: [
+        '+573214885822',  // 🔴 REEMPLAZA CON TU NÚMERO 1
+        '+573004429451',  // 🔴 REEMPLAZA CON TU NÚMERO 2
+        '+573212694280'   // 🔴 REEMPLAZA CON TU NÚMERO 3
+      ],
+        autoRefreshSeconds: 30
+      };
 
-    let allProducts = [], filteredProducts = [];
+      let allProducts = [], filteredProducts = [];
+      let currentNumberIndex = 0;
 
     window.addEventListener('DOMContentLoaded', async () => {
       await loadProducts();
@@ -626,7 +631,7 @@
           <div class="product-info">
             <h3 class="product-name">${escape(p.nombre)}</h3>
             <p class="product-description">${escape(p.descripcion || '')}</p>
-            <div class="product-price">${parseFloat(p.precio).toFixed(2)}</div>
+            <div class="product-price">$${parseFloat(p.precio).toLocaleString('es-CO', {maximumFractionDigits: 0})}</div>
             <a href="#" class="whatsapp-btn" onclick="consultar(event, '${escape(p.nombre)}', ${p.precio}, '${escape(p.tallas || '')}')">
               💬 Consultar
             </a>
@@ -660,7 +665,10 @@
     }
 
     function getPhone() {
-      return CONFIG.whatsappNumbers[Math.floor(Math.random()*CONFIG.whatsappNumbers.length)];
+  // Rotación secuencial: 1 → 2 → 3 → 1 → 2 → 3...
+      const phone = CONFIG.whatsappNumbers[currentNumberIndex];
+      currentNumberIndex = (currentNumberIndex + 1) % CONFIG.whatsappNumbers.length;
+      return phone;
     }
 
     function consultar(e, nombre, precio, tallas) {
