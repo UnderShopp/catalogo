@@ -1,14 +1,5 @@
 [
   {
-    "nombre": "Lv Skate Black Pearl",
-    "precio": 350000.0,
-    "descripcion": "",
-    "tallas": "36-42",
-    "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_1.jpg",
-    "fecha": "2025-11-12T04:42:47.058917",
-    "id": "1"
-  },
-  {
     "nombre": "LV Skate White",
     "precio": 180000.0,
     "descripcion": "",
