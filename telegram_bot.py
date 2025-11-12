@@ -4,6 +4,9 @@ import logging
 from datetime import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
+from git import Repo
+import tempfile
+import shutil
 
 # Configuración de logging
 logging.basicConfig(
@@ -21,48 +24,158 @@ PRODUCTOS_FILE = 'productos.json'
 # Variable para almacenar productos temporalmente
 productos_temp = {}
 
+# Configuración de administradores
+ADMIN_IDS = os.getenv('ADMIN_IDS', '')
+ADMIN_LIST = [int(id.strip()) for id in ADMIN_IDS.split(',') if id.strip().isdigit()]
+
+# Configuración de Git (usando las variables que ya tienes)
+GITHUB_USER = os.getenv('GITHUB_USER')
+GITHUB_REPO = os.getenv('GITHUB_REPO')
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+GIT_BRANCH = os.getenv('GIT_BRANCH', 'main')
+
+# Construir URL del repositorio
+GIT_REPO_URL = f"https://github.com/{GITHUB_USER}/{GITHUB_REPO}.git" if GITHUB_USER and GITHUB_REPO else None
+
+def get_repo_url_with_auth():
+    """Obtiene la URL del repo con autenticación"""
+    if not GIT_REPO_URL or not GITHUB_TOKEN:
+        return None
+    return GIT_REPO_URL.replace('https://', f'https://{GITHUB_TOKEN}@')
+
+def push_to_github(productos):
+    """Sube los cambios al repositorio GitHub"""
+    try:
+        repo_url = get_repo_url_with_auth()
+        if not repo_url:
+            logger.warning("⚠️ Git no configurado. Productos solo guardados localmente.")
+            return False
+        
+        # Crear directorio temporal
+        temp_dir = tempfile.mkdtemp()
+        
+        try:
+            logger.info("📥 Clonando repositorio...")
+            repo = Repo.clone_from(repo_url, temp_dir, branch=GIT_BRANCH, depth=1)
+            
+            # Configurar usuario Git
+            with repo.config_writer() as git_config:
+                git_config.set_value('user', 'name', GITHUB_USER or 'Bot Telegram')
+                git_config.set_value('user', 'email', f'{GITHUB_USER}@users.noreply.github.com' if GITHUB_USER else 'bot@telegram.com')
+            
+            # Actualizar productos.json en el repo
+            productos_path = os.path.join(temp_dir, PRODUCTOS_FILE)
+            with open(productos_path, 'w', encoding='utf-8') as f:
+                json.dump(productos, f, ensure_ascii=False, indent=2)
+            
+            # Verificar si hay cambios
+            if repo.is_dirty(untracked_files=True):
+                # Agregar archivo
+                repo.index.add([PRODUCTOS_FILE])
+                
+                # Commit
+                commit_message = f"🤖 Actualización catálogo - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                repo.index.commit(commit_message)
+                
+                # Push
+                origin = repo.remote('origin')
+                origin.push()
+                
+                logger.info("✅ Cambios subidos a GitHub exitosamente")
+                return True
+            else:
+                logger.info("ℹ️ No hay cambios para subir")
+                return True
+            
+        except Exception as e:
+            logger.error(f"❌ Error en operación Git: {e}")
+            return False
+            
+        finally:
+            # Limpiar directorio temporal
+            try:
+                shutil.rmtree(temp_dir, ignore_errors=True)
+            except:
+                pass
+            
+    except Exception as e:
+        logger.error(f"❌ Error subiendo a GitHub: {e}")
+        return False
+
 def cargar_productos():
-    """Carga productos desde el archivo JSON"""
+    """Carga productos desde el archivo JSON local"""
     try:
         if os.path.exists(PRODUCTOS_FILE):
             with open(PRODUCTOS_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                return data.get('productos', [])
+                content = f.read().strip()
+                if not content or content == '[]':
+                    return []
+                data = json.loads(content)
+                return data if isinstance(data, list) else []
+        return []
+    except json.JSONDecodeError as e:
+        logger.error(f"❌ Error decodificando JSON: {e}")
         return []
     except Exception as e:
-        logger.error(f"Error cargando productos: {e}")
+        logger.error(f"❌ Error cargando productos: {e}")
         return []
 
 def guardar_productos(productos):
-    """Guarda productos en el archivo JSON"""
+    """Guarda productos localmente y en GitHub"""
     try:
-        data = {
-            'productos': productos,
-            'metadata': {
-                'ultima_actualizacion': datetime.now().isoformat(),
-                'total_productos': len(productos),
-                'version': '1.0'
-            }
-        }
+        # Guardar localmente primero
         with open(PRODUCTOS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+            json.dump(productos, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"✅ Guardados {len(productos)} productos localmente")
+        
+        # Intentar subir a GitHub
+        git_success = push_to_github(productos)
+        
         return True
     except Exception as e:
-        logger.error(f"Error guardando productos: {e}")
+        logger.error(f"❌ Error guardando productos: {e}")
         return False
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando de inicio"""
     user = update.effective_user
+    
+    git_status = "✅ Conectado" if GITHUB_USER and GITHUB_REPO and GITHUB_TOKEN else "⚠️ No configurado"
+    
     await update.message.reply_text(
         f"🛍️ *Bienvenido al Bot del Catálogo Premium*\n\n"
         f"Hola {user.first_name}! 👋\n\n"
+        f"🔗 GitHub: {git_status}\n"
+        f"📁 Repo: {GITHUB_REPO or 'No configurado'}\n\n"
         "Comandos disponibles:\n"
         "🆕 /agregar - Agregar nuevo producto\n"
         "📋 /listar - Ver todos los productos\n"
         "🗑️ /eliminar - Eliminar un producto\n"
         "ℹ️ /ayuda - Ver ayuda detallada\n"
-        "📊 /stats - Ver estadísticas",
+        "📊 /stats - Ver estadísticas\n"
+        "🔧 /config - Ver configuración",
+        parse_mode='Markdown'
+    )
+
+async def config(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Muestra la configuración actual"""
+    git_configured = "✅ Sí" if GITHUB_USER and GITHUB_REPO and GITHUB_TOKEN else "❌ No"
+    
+    await update.message.reply_text(
+        f"🔧 *Configuración del Bot*\n\n"
+        f"👤 Usuario GitHub: `{GITHUB_USER or 'No configurado'}`\n"
+        f"📁 Repositorio: `{GITHUB_REPO or 'No configurado'}`\n"
+        f"🌿 Rama: `{GIT_BRANCH}`\n"
+        f"🔗 Git configurado: {git_configured}\n\n"
+        f"📝 *Variables de entorno necesarias en Render:*\n"
+        f"• TELEGRAM_BOT_TOKEN ✅\n"
+        f"• GITHUB_USER {'✅' if GITHUB_USER else '❌'}\n"
+        f"• GITHUB_REPO {'✅' if GITHUB_REPO else '❌'}\n"
+        f"• GITHUB_TOKEN {'✅' if GITHUB_TOKEN else '❌'}\n"
+        f"• GIT_BRANCH (opcional, default: main)\n\n"
+        f"💡 Configura las variables en:\n"
+        f"Render → Tu servicio → Environment",
         parse_mode='Markdown'
     )
 
@@ -75,12 +188,13 @@ async def ayuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "2. Ingresa el nombre del producto\n"
         "3. Ingresa el precio (solo números)\n"
         "4. Ingresa la descripción (o '-' para omitir)\n"
-        "5. Ingresa las tallas disponibles (ej: 36-42 o '-' para omitir)\n"
+        "5. Ingresa las tallas disponibles (ej: 36-42 o '-')\n"
         "6. Envía la imagen del producto (o '-' para omitir)\n\n"
         "*📋 Otros comandos:*\n"
         "/listar - Ver todos los productos\n"
         "/eliminar [número] - Eliminar producto\n"
         "/stats - Ver estadísticas del catálogo\n"
+        "/config - Ver configuración de Git\n"
         "/cancelar - Cancelar operación actual\n\n"
         "*💡 Consejos:*\n"
         "• Las imágenes mejoran la presentación\n"
@@ -103,9 +217,9 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     total = len(productos)
     con_imagen = sum(1 for p in productos if p.get('imagen'))
-    precio_promedio = sum(p['precio'] for p in productos) / total
-    precio_min = min(p['precio'] for p in productos)
-    precio_max = max(p['precio'] for p in productos)
+    precio_promedio = sum(float(p.get('precio', 0)) for p in productos) / total
+    precio_min = min(float(p.get('precio', 0)) for p in productos)
+    precio_max = max(float(p.get('precio', 0)) for p in productos)
     
     await update.message.reply_text(
         f"📊 *Estadísticas del Catálogo*\n\n"
@@ -250,12 +364,15 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     productos = cargar_productos()
     
     # Generar ID único
-    producto['id'] = f"producto:{len(productos) + 1}"
+    producto_id = len(productos) + 1
+    producto['id'] = str(producto_id)
     
     # Agregar nuevo producto
     productos.append(producto)
     
-    # Guardar
+    # Guardar (local y GitHub)
+    await update.message.reply_text("⏳ Guardando producto y sincronizando con GitHub...")
+    
     if guardar_productos(productos):
         # Crear mensaje de confirmación
         mensaje = (
@@ -268,17 +385,25 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
             mensaje += f"📝 {producto['descripcion'][:100]}\n"
         
         if producto.get('tallas'):
-            mensaje += f"📏 Tallas: {producto['tallas']}\n"
+            mensaje += f"👟 Tallas: {producto['tallas']}\n"
         
         if imagen_url:
             mensaje += "📸 Con imagen\n"
         
         mensaje += (
-            f"\n🆔 ID: {len(productos)}\n"
+            f"\n🆔 ID: {producto_id}\n"
             f"📊 Total en catálogo: {len(productos)}\n\n"
-            "El producto ya está visible en el catálogo web ✨\n"
-            "Usa /agregar para añadir otro producto."
         )
+        
+        if GITHUB_USER and GITHUB_REPO and GITHUB_TOKEN:
+            mensaje += (
+                "🔗 Producto sincronizado con GitHub\n"
+                "🌐 Visible en tu página web en 1-2 minutos\n\n"
+            )
+        else:
+            mensaje += "⚠️ Git no configurado - solo guardado localmente\n\n"
+        
+        mensaje += "Usa /agregar para añadir otro producto."
         
         await update.message.reply_text(mensaje, parse_mode='Markdown')
         
@@ -326,11 +451,11 @@ async def listar_productos(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for i, prod in enumerate(bloque, idx_bloque * 10 + 1):
             mensaje += (
                 f"*{i}.* {prod['nombre']}\n"
-                f"   💰 ${prod['precio']:,.2f}"
+                f"   💰 ${float(prod.get('precio', 0)):,.2f}"
             )
             
             if prod.get('tallas'):
-                mensaje += f" | 📏 {prod['tallas']}"
+                mensaje += f" | 👟 {prod['tallas']}"
             
             if prod.get('imagen'):
                 mensaje += " | 📸"
@@ -369,14 +494,20 @@ async def eliminar_producto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         producto_eliminado = productos.pop(numero - 1)
         
+        await update.message.reply_text("⏳ Eliminando producto y sincronizando...")
+        
         if guardar_productos(productos):
-            await update.message.reply_text(
+            mensaje = (
                 f"✅ *Producto eliminado*\n\n"
                 f"📦 {producto_eliminado['nombre']}\n"
-                f"💰 ${producto_eliminado['precio']:,.2f}\n\n"
-                f"📊 Quedan {len(productos)} productos en el catálogo.",
-                parse_mode='Markdown'
+                f"💰 ${float(producto_eliminado.get('precio', 0)):,.2f}\n\n"
+                f"📊 Quedan {len(productos)} productos en el catálogo."
             )
+            
+            if GITHUB_USER and GITHUB_REPO and GITHUB_TOKEN:
+                mensaje += "\n🔗 Cambios sincronizados con GitHub"
+            
+            await update.message.reply_text(mensaje, parse_mode='Markdown')
         else:
             await update.message.reply_text(
                 "❌ Error al eliminar el producto."
@@ -407,12 +538,24 @@ def main():
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     
     if not TOKEN:
-        logger.error("❌ Error: TELEGRAM_BOT_TOKEN no configurado en las variables de entorno")
-        logger.info("💡 Configura el token en Render:")
-        logger.info("   1. Ve a tu servicio en Render")
-        logger.info("   2. Environment > Environment Variables")
-        logger.info("   3. Agrega: TELEGRAM_BOT_TOKEN = tu_token")
+        logger.error("❌ Error: TELEGRAM_BOT_TOKEN no configurado")
+        logger.info("💡 Configura el token en las variables de entorno de Render")
         return
+    
+    # Verificar configuración de Git
+    if not GITHUB_USER or not GITHUB_REPO or not GITHUB_TOKEN:
+        logger.warning("⚠️ Git no configurado completamente")
+        logger.info("💡 Para sincronizar con GitHub, configura:")
+        logger.info("   - GITHUB_USER: Tu usuario de GitHub")
+        logger.info("   - GITHUB_REPO: Nombre del repositorio (sin .git)")
+        logger.info("   - GITHUB_TOKEN: Token de acceso personal de GitHub")
+        logger.info("   - GIT_BRANCH: Rama (opcional, default: main)")
+        logger.info("")
+        logger.info("🔑 Crear token en: https://github.com/settings/tokens")
+        logger.info("   Permisos necesarios: repo (acceso completo)")
+    else:
+        logger.info(f"✅ Git configurado: {GITHUB_USER}/{GITHUB_REPO}")
+        logger.info(f"🌿 Rama: {GIT_BRANCH}")
     
     # Inicializar archivo de productos si no existe
     if not os.path.exists(PRODUCTOS_FILE):
@@ -442,18 +585,19 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("ayuda", ayuda))
     application.add_handler(CommandHandler("stats", stats))
+    application.add_handler(CommandHandler("config", config))
     application.add_handler(conv_handler)
     application.add_handler(CommandHandler("listar", listar_productos))
     application.add_handler(CommandHandler("eliminar", eliminar_producto))
     application.add_error_handler(error_handler)
     
     # Iniciar bot
-    logger.info("=" * 50)
+    logger.info("="*50)
     logger.info("🤖 Bot de Catálogo Premium iniciado")
-    logger.info("=" * 50)
+    logger.info("="*50)
     logger.info("✅ Bot listo para recibir comandos")
     logger.info("📱 Escribe /start en Telegram para comenzar")
-    logger.info("=" * 50)
+    logger.info("="*50)
     
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
