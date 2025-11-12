@@ -133,7 +133,6 @@
       font-size: 1.3rem;
     }
 
-    /* CATEGORÍAS */
     .categories {
       max-width: 1300px;
       margin: 2rem auto 1rem;
@@ -163,7 +162,6 @@
       box-shadow: 0 5px 20px rgba(212,175,55,0.4);
     }
 
-    /* ESTADÍSTICAS */
     .stats-bar {
       max-width: 1200px;
       margin: 1rem auto 2rem;
@@ -190,7 +188,6 @@
       font-size: 1.4rem;
     }
 
-    /* CATÁLOGO - 2 COLUMNAS */
     .products-container {
       max-width: 1300px;
       margin: auto;
@@ -224,26 +221,71 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .product-image {
+    .product-media {
       height: 280px;
       display: flex;
       align-items: center;
       justify-content: center;
       background: rgba(255,255,255,0.03);
       overflow: hidden;
+      position: relative;
     }
 
-    .product-image img {
+    .product-image {
       width: 100%;
       height: 100%;
       object-fit: cover;
       transition: transform 0.6s ease, filter 0.6s ease;
       filter: brightness(0.9);
+      cursor: pointer;
     }
 
-    .product-card:hover img {
+    .product-card:hover .product-image {
       transform: scale(1.1);
       filter: brightness(1.05);
+    }
+
+    .product-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .media-indicator {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.7);
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .gallery-dots {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.5);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .dot.active {
+      background: var(--gold);
+      width: 24px;
+      border-radius: 4px;
     }
 
     .product-info {
@@ -295,12 +337,111 @@
       text-decoration: none;
       transition: all 0.3s ease;
       font-size: 0.9rem;
+      border: none;
+      cursor: pointer;
     }
 
     .whatsapp-btn:hover {
       transform: translateY(-3px);
       background: linear-gradient(135deg, #128C7E, #075E54);
       box-shadow: 0 5px 20px rgba(37, 211, 102, 0.4);
+    }
+
+    /* MODAL */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      backdrop-filter: blur(10px);
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      position: relative;
+      max-width: 90%;
+      max-height: 90%;
+      animation: zoomIn 0.3s ease;
+    }
+
+    @keyframes zoomIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-content img,
+    .modal-content video {
+      max-width: 100%;
+      max-height: 90vh;
+      border-radius: 10px;
+      box-shadow: 0 0 50px rgba(212,175,55,0.5);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: -40px;
+      right: 0;
+      font-size: 2rem;
+      color: white;
+      cursor: pointer;
+      background: rgba(212,175,55,0.3);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+    }
+
+    .modal-close:hover {
+      background: var(--gold);
+      transform: rotate(90deg);
+    }
+
+    .modal-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(212,175,55,0.3);
+      color: white;
+      border: none;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-nav:hover {
+      background: var(--gold);
+    }
+
+    .modal-nav.prev {
+      left: 20px;
+    }
+
+    .modal-nav.next {
+      right: 20px;
     }
 
     .footer {
@@ -330,7 +471,6 @@
       font-size: 2rem;
     }
 
-    /* RESPONSIVE */
     @media (max-width: 768px) {
       .brand-text h1 {
         font-size: 1.8rem;
@@ -348,8 +488,14 @@
         padding: 1rem;
       }
       
-      .product-image {
+      .product-media {
         height: 250px;
+      }
+
+      .modal-nav {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
       }
     }
 
@@ -377,7 +523,6 @@
     </div>
   </header>
 
-  <!-- CATEGORÍAS -->
   <div class="categories">
     <button class="category-btn active" data-category="todos">📦 Todos</button>
     <button class="category-btn" data-category="zapatillas">👟 Zapatillas</button>
@@ -399,6 +544,16 @@
     </div>
   </div>
 
+  <!-- MODAL -->
+  <div id="mediaModal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeModal()">×</span>
+      <button class="modal-nav prev" onclick="prevMedia()">‹</button>
+      <button class="modal-nav next" onclick="nextMedia()">›</button>
+      <div id="modalMediaContainer"></div>
+    </div>
+  </div>
+
   <footer class="footer">
     <p>© 2025 Under Shopp – Catálogo administrado automáticamente</p>
   </footer>
@@ -412,6 +567,9 @@
     let allProducts = [];
     let filteredProducts = [];
     let currentCategory = 'todos';
+    let currentPhoneIndex = 0; // Para rotación secuencial
+    let currentMediaIndex = 0;
+    let currentProductMedia = [];
 
     window.addEventListener('DOMContentLoaded', async () => {
       await loadProducts();
@@ -467,6 +625,26 @@
       render();
     }
 
+    function getProductMedia(product) {
+      let media = [];
+      
+      // Agregar imágenes (puede ser string único o array)
+      if (product.imagen) {
+        if (Array.isArray(product.imagen)) {
+          media = [...product.imagen.map(img => ({ type: 'image', url: img }))];
+        } else if (product.imagen.trim()) {
+          media.push({ type: 'image', url: product.imagen });
+        }
+      }
+      
+      // Agregar video si existe
+      if (product.video && product.video.trim()) {
+        media.push({ type: 'video', url: product.video });
+      }
+      
+      return media;
+    }
+
     function render() {
       const grid = document.getElementById('productsGrid');
       const count = document.getElementById('productCount');
@@ -477,30 +655,40 @@
         return;
       }
 
-      grid.innerHTML = filteredProducts.map(p => `
+      grid.innerHTML = filteredProducts.map((p, idx) => {
+        const media = getProductMedia(p);
+        const hasMedia = media.length > 0;
+        const hasMultiple = media.length > 1;
+        
+        return `
         <div class="product-card">
-          <div class="product-image">
-            ${p.imagen ? `<img loading="lazy" src="${p.imagen}" alt="${escape(p.nombre)}" onerror="this.parentElement.innerHTML='👟'">` : '👟'}
+          <div class="product-media" onclick="openModal(${idx})">
+            ${hasMedia ? (
+              media[0].type === 'video' 
+                ? `<video class="product-video" src="${media[0].url}" muted loop autoplay></video>`
+                : `<img class="product-image" loading="lazy" src="${media[0].url}" alt="${escape(p.nombre)}" onerror="this.parentElement.innerHTML='👟'">`
+            ) : '<div style="font-size:4rem;">👟</div>'}
+            
+            ${hasMultiple ? `<div class="media-indicator">📷 ${media.length}</div>` : ''}
           </div>
+          
           <div class="product-info">
             <h3 class="product-name">${escape(p.nombre)}</h3>
             ${p.descripcion ? `<p class="product-description">${escape(p.descripcion)}</p>` : ''}
             <div class="product-price">$${formatPrice(p.precio)}</div>
             ${p.tallas ? `<div class="product-tallas">📏 Tallas: ${escape(p.tallas)}</div>` : ''}
-            <a href="#" class="whatsapp-btn" onclick="consultar(event, '${escape(p.nombre)}', ${p.precio}, '${escape(p.tallas || '')}')">
+            <button class="whatsapp-btn" onclick="consultar(event, '${escape(p.nombre)}', ${p.precio}, '${escape(p.tallas || '')}')">
               💬 Consultar
-            </a>
+            </button>
           </div>
         </div>
-      `).join('');
+      `}).join('');
     }
 
     function formatPrice(price) {
-      // Convertir el precio a número y formatear
       const num = parseFloat(price);
       if (isNaN(num)) return price;
       
-      // Formatear con separador de miles
       return num.toLocaleString('es-CO', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
@@ -540,17 +728,83 @@
       });
     }
 
+    // ROTACIÓN SECUENCIAL DE NÚMEROS
     function getPhone() {
-      return CONFIG.whatsappNumbers[Math.floor(Math.random()*CONFIG.whatsappNumbers.length)];
+      const phone = CONFIG.whatsappNumbers[currentPhoneIndex];
+      currentPhoneIndex = (currentPhoneIndex + 1) % CONFIG.whatsappNumbers.length;
+      return phone;
     }
 
     function consultar(e, nombre, precio, tallas) {
-      e.preventDefault();
+      e.stopPropagation();
       const phone = getPhone();
       const precioFormateado = formatPrice(precio);
       const msg = `👋 Hola, estoy interesado en:\n\n${nombre}\n💰 Precio: $${precioFormateado}\n${tallas?`📏 Tallas: ${tallas}`:''}\n\n¿Está disponible?`;
       window.open(`https://wa.me/${phone.replace('+','')}?text=${encodeURIComponent(msg)}`,'_blank');
     }
+
+    // MODAL DE GALERÍA
+    function openModal(productIndex) {
+      const product = filteredProducts[productIndex];
+      currentProductMedia = getProductMedia(product);
+      
+      if (currentProductMedia.length === 0) return;
+      
+      currentMediaIndex = 0;
+      showMedia();
+      document.getElementById('mediaModal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      document.getElementById('mediaModal').classList.remove('active');
+      document.body.style.overflow = 'auto';
+    }
+
+    function showMedia() {
+      const container = document.getElementById('modalMediaContainer');
+      const media = currentProductMedia[currentMediaIndex];
+      
+      if (media.type === 'video') {
+        container.innerHTML = `<video src="${media.url}" controls autoplay style="max-width:100%;max-height:90vh;border-radius:10px;"></video>`;
+      } else {
+        container.innerHTML = `<img src="${media.url}" style="max-width:100%;max-height:90vh;border-radius:10px;">`;
+      }
+      
+      // Mostrar/ocultar botones de navegación
+      const prevBtn = document.querySelector('.modal-nav.prev');
+      const nextBtn = document.querySelector('.modal-nav.next');
+      
+      if (currentProductMedia.length > 1) {
+        prevBtn.style.display = 'flex';
+        nextBtn.style.display = 'flex';
+      } else {
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+      }
+    }
+
+    function prevMedia() {
+      currentMediaIndex = (currentMediaIndex - 1 + currentProductMedia.length) % currentProductMedia.length;
+      showMedia();
+    }
+
+    function nextMedia() {
+      currentMediaIndex = (currentMediaIndex + 1) % currentProductMedia.length;
+      showMedia();
+    }
+
+    // Cerrar modal con ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+      if (e.key === 'ArrowLeft') prevMedia();
+      if (e.key === 'ArrowRight') nextMedia();
+    });
+
+    // Cerrar modal al hacer click fuera
+    document.getElementById('mediaModal').addEventListener('click', (e) => {
+      if (e.target.id === 'mediaModal') closeModal();
+    });
 
     function escape(text){
       const div=document.createElement('div');
@@ -558,7 +812,6 @@
       return div.innerHTML;
     }
 
-    // Animación del spinner
     const style = document.createElement('style');
     style.textContent = '@keyframes spin { to { transform: rotate(360deg); }}';
     document.head.appendChild(style);
