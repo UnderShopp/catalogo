@@ -2,8 +2,10 @@
 import os
 import json
 import subprocess
-from datetime import datetime
+import threading
+from datetime import datetime, timezone
 from pathlib import Path
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes, ConversationHandler
 
@@ -80,34 +82,59 @@ def save_and_push_productos():
         if not ok:
             print("No se pudo acceder al repo")
             return False
+        
         ruta = LOCAL_REPO_PATH / JSON_FILENAME
         lista = list(productos_db.values())
         print(f"Escribiendo {len(lista)} productos")
+        
         with ruta.open("w", encoding="utf-8") as f:
             json.dump(lista, f, ensure_ascii=False, indent=2)
         print("Archivo escrito")
+        
         subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "config", "user.email", "bot@undershopp.local"], check=True)
         subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "config", "user.name", "UnderShoppBot"], check=True)
+        
         print("Git add...")
         subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "add", JSON_FILENAME], check=True)
+        
         res = subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "status", "--porcelain"], capture_output=True, text=True)
         if res.stdout.strip() == "":
             print("No hay cambios")
             return True
+        
         print("Git commit...")
-        mensaje = f"Bot: actualizacion {datetime.utcnow().isoformat()}"
+        mensaje = f"Bot: actualizacion {datetime.now(timezone.utc).isoformat()}"
         subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "commit", "-m", mensaje], check=True)
+        
         print("Git push...")
-        subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "push", repo_url_with_token(), REPO_BRANCH], check=True, capture_output=True)
+        result = subprocess.run(
+            ["git", "-C", str(LOCAL_REPO_PATH), "push", repo_url_with_token(), REPO_BRANCH],
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            print(f"ERROR EN PUSH:")
+            print(f"Return code: {result.returncode}")
+            print(f"Stdout: {result.stdout}")
+            print(f"Stderr: {result.stderr}")
+            return False
+        
         print("Push exitoso\n")
         return True
+        
     except subprocess.CalledProcessError as e:
-        print(f"Error en git: {e}")
+        print(f"Error en git comando: {e}")
+        print(f"Comando: {e.cmd}")
         if hasattr(e, 'stderr') and e.stderr:
             print(f"Stderr: {e.stderr}")
+        if hasattr(e, 'stdout') and e.stdout:
+            print(f"Stdout: {e.stdout}")
         return False
     except Exception as e:
         print(f"Error general: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def es_admin(user_id):
@@ -214,14 +241,14 @@ async def finalizar_producto(update, context):
     try:
         temp = context.user_data
         producto = {
-            "id": f"producto_{int(datetime.utcnow().timestamp())}",
+            "id": f"producto_{int(datetime.now(timezone.utc).timestamp())}",
             "nombre": temp.get("nombre", ""),
             "precio": temp.get("precio", "0"),
             "descripcion": temp.get("descripcion", ""),
             "tallas": temp.get("tallas", ""),
             "categoria": temp.get("categoria", "zapatillas"),
             "imagen": temp.get("imagen", ""),
-            "fecha": datetime.utcnow().isoformat()
+            "fecha": datetime.now(timezone.utc).isoformat()
         }
         productos_db[producto["id"]] = producto
         saved = save_and_push_productos()
@@ -236,6 +263,22 @@ async def finalizar_producto(update, context):
         context.user_data.clear()
         return ConversationHandler.END
 
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b'Bot OK')
+    
+    def log_message(self, format, *args):
+        pass
+
+def start_health_server():
+    port = int(os.getenv('PORT', 10000))
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    print(f"Servidor HTTP en puerto {port}")
+    server.serve_forever()
+
 def main():
     missing = []
     if not BOT_TOKEN: missing.append("BOT_TOKEN")
@@ -246,14 +289,19 @@ def main():
     if missing:
         print(f"Faltan: {', '.join(missing)}")
         return
+    
+    threading.Thread(target=start_health_server, daemon=True).start()
+    
     ensure_repo()
     global productos_db
     productos_lista = load_productos_from_disk()
     productos_db = {p.get("id", f"prod_{i}"): p for i, p in enumerate(productos_lista)}
+    
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("listar", listar))
     app.add_handler(CommandHandler("catalogo", catalogo))
+    
     conv = ConversationHandler(
         entry_points=[CommandHandler("agregar", agregar_inicio)],
         states={
@@ -264,8 +312,10 @@ def main():
             CATEGORIA: [CallbackQueryHandler(recibir_categoria, pattern="^cat_")],
             IMAGEN: [MessageHandler(filters.PHOTO, recibir_imagen), MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_imagen), CommandHandler("saltar", saltar)]
         },
-        fallbacks=[CommandHandler("cancelar", cancelar)]
+        fallbacks=[CommandHandler("cancelar", cancelar)],
+        per_message=False
     )
+    
     app.add_handler(conv)
     print("Bot iniciado\n")
     app.run_polling(drop_pending_updates=True)
