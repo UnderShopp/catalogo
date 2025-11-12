@@ -1,343 +1,461 @@
-#!/usr/bin/env python3
 import os
 import json
-import subprocess
+import logging
 from datetime import datetime
-from pathlib import Path
 from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    MessageHandler,
-    filters,
-    ContextTypes,
-    ConversationHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
+
+# Configuración de logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
 )
+logger = logging.getLogger(__name__)
 
-# -------------------------
-# CONFIG (desde env vars)
-# -------------------------
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
-GITHUB_USER = os.getenv("GITHUB_USER")
-GITHUB_REPO = os.getenv("GITHUB_REPO")  # ejemplo: S0David7G/catalogo
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-
-# Path en Render (temporal)
-LOCAL_REPO_PATH = Path("/tmp/catalogo")
-JSON_FILENAME = "productos.json"
-REPO_BRANCH = "main"
-
-# Conversación estados
+# Estados del conversation handler
 NOMBRE, PRECIO, DESCRIPCION, TALLAS, IMAGEN = range(5)
 
-# In-memory cache (se carga desde productos.json al arrancar)
-productos_db = {}
+# Archivo JSON para productos
+PRODUCTOS_FILE = 'productos.json'
 
-# -------------------------
-# Utilidades Git / FS
-# -------------------------
-def repo_url_with_token():
-    return f"https://{GITHUB_USER}:{GITHUB_TOKEN}@github.com/{GITHUB_REPO}.git"
+# Variable para almacenar productos temporalmente
+productos_temp = {}
 
-def ensure_repo():
-    """
-    Clona el repo en /tmp/catalogo si no existe. Si existe, hace git pull.
-    """
+def cargar_productos():
+    """Carga productos desde el archivo JSON"""
     try:
-        if not LOCAL_REPO_PATH.exists():
-            LOCAL_REPO_PATH.mkdir(parents=True, exist_ok=True)
-            print("Clonando repo...")
-            subprocess.run(["git", "clone", repo_url_with_token(), str(LOCAL_REPO_PATH)], check=True)
-        else:
-            print("Actualizando repo (pull)...")
-            # Ejecutar git pull en el directorio
-            subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "pull"], check=True)
-        return True
-    except subprocess.CalledProcessError as e:
-        print("Error con git (clone/pull):", e)
-        return False
-
-def load_productos_from_disk():
-    ruta = LOCAL_REPO_PATH / JSON_FILENAME
-    if not ruta.exists():
-        return {}
-    try:
-        with ruta.open("r", encoding="utf-8") as f:
-            arr = json.load(f)
-            # Convertir a dict por id si el archivo contiene lista
-            if isinstance(arr, list):
-                return {p.get("id", f"prod_{i}"): p for i, p in enumerate(arr)}
-            elif isinstance(arr, dict):
-                return arr
+        if os.path.exists(PRODUCTOS_FILE):
+            with open(PRODUCTOS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data.get('productos', [])
+        return []
     except Exception as e:
-        print("Error leyendo productos.json:", e)
-    return {}
+        logger.error(f"Error cargando productos: {e}")
+        return []
 
-def save_and_push_productos():
-    """
-    Escribe productos.json en el repo local, hace commit y push.
-    """
+def guardar_productos(productos):
+    """Guarda productos en el archivo JSON"""
     try:
-        # Asegurarnos repo disponible
-        ok = ensure_repo()
-        if not ok:
-            print("No se pudo acceder al repo para guardar.")
-            return False
-
-        ruta = LOCAL_REPO_PATH / JSON_FILENAME
-        # Convertir dict -> lista para compatibilidad con frontend
-        lista = list(productos_db.values())
-        with ruta.open("w", encoding="utf-8") as f:
-            json.dump(lista, f, ensure_ascii=False, indent=2)
-
-        # Config git local temporal (no toques config global del sistema)
-        subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "config", "user.email", "bot@under-shopp.local"], check=True)
-        subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "config", "user.name", "UnderShoppBot"], check=True)
-
-        # Añadir, commit y push (usando URL con token para autenticación)
-        subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "add", JSON_FILENAME], check=True)
-        # Commit solo si hay cambios (evitar error cuando no hay modificaciones)
-        res = subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "status", "--porcelain"], capture_output=True, text=True)
-        if res.stdout.strip() == "":
-            print("No hay cambios para commitear.")
-            return True
-
-        mensaje = f"Automático: actualización catálogo {datetime.utcnow().isoformat()}"
-        subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "commit", "-m", mensaje], check=True)
-        # Push usando token (remote ya apunta a origin con URL normal; usar push con URL autenticada)
-        push_cmd = ["git", "-C", str(LOCAL_REPO_PATH), "push", repo_url_with_token(), REPO_BRANCH]
-        subprocess.run(push_cmd, check=True)
-        print("✅ productos.json subido correctamente.")
+        data = {
+            'productos': productos,
+            'metadata': {
+                'ultima_actualizacion': datetime.now().isoformat(),
+                'total_productos': len(productos),
+                'version': '1.0'
+            }
+        }
+        with open(PRODUCTOS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
         return True
-    except subprocess.CalledProcessError as e:
-        print("Error durante commit/push:", e)
+    except Exception as e:
+        logger.error(f"Error guardando productos: {e}")
         return False
 
-# -------------------------
-# Seguridad
-# -------------------------
-def es_admin(user_id: int) -> bool:
-    return user_id == ADMIN_ID
-
-def solo_admins(func):
-    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        user = update.effective_user
-        uid = user.id if user else None
-        if not es_admin(uid):
-            await update.message.reply_text("🚫 Acceso denegado. Solo administradores.")
-            return
-        return await func(update, context)
-    return wrapper
-
-# -------------------------
-# Handlers
-# -------------------------
-@solo_admins
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando de inicio"""
+    user = update.effective_user
     await update.message.reply_text(
-        "👋 Bienvenido a *Under Shopp Bot*\n\n"
-        "Envía /agregar para añadir un producto (con conversación guiada).\n"
-        "También puedes usar formato simple: Nombre | Precio | ImagenURL",
-        parse_mode="Markdown"
+        f"🛍️ *Bienvenido al Bot del Catálogo Premium*\n\n"
+        f"Hola {user.first_name}! 👋\n\n"
+        "Comandos disponibles:\n"
+        "🆕 /agregar - Agregar nuevo producto\n"
+        "📋 /listar - Ver todos los productos\n"
+        "🗑️ /eliminar - Eliminar un producto\n"
+        "ℹ️ /ayuda - Ver ayuda detallada\n"
+        "📊 /stats - Ver estadísticas",
+        parse_mode='Markdown'
     )
 
-@solo_admins
 async def ayuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando de ayuda"""
     await update.message.reply_text(
-        "📚 *Ayuda*\n\n"
-        "• /agregar → Iniciar asistente para agregar producto\n"
-        "• /listar → Ver productos actuales\n"
-        "• /catalogo → Obtener URL pública\n\n"
-        "Formato rápido (texto):\nNombre | Precio | URL_imagen",
-        parse_mode="Markdown"
+        "📚 *Guía de uso del bot*\n\n"
+        "*🆕 Agregar producto:*\n"
+        "1. Usa /agregar\n"
+        "2. Ingresa el nombre del producto\n"
+        "3. Ingresa el precio (solo números)\n"
+        "4. Ingresa la descripción (o '-' para omitir)\n"
+        "5. Ingresa las tallas disponibles (ej: 36-42 o '-' para omitir)\n"
+        "6. Envía la imagen del producto (o '-' para omitir)\n\n"
+        "*📋 Otros comandos:*\n"
+        "/listar - Ver todos los productos\n"
+        "/eliminar [número] - Eliminar producto\n"
+        "/stats - Ver estadísticas del catálogo\n"
+        "/cancelar - Cancelar operación actual\n\n"
+        "*💡 Consejos:*\n"
+        "• Las imágenes mejoran la presentación\n"
+        "• Usa descripciones claras y concisas\n"
+        "• Especifica todas las tallas disponibles",
+        parse_mode='Markdown'
     )
 
-@solo_admins
-async def catalogo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    url = f"https://{GITHUB_USER}.github.io/{GITHUB_REPO.split('/',1)[1]}/"
-    await update.message.reply_text(f"🌐 Catálogo público:\n{url}")
-
-@solo_admins
-async def listar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not productos_db:
-        await update.message.reply_text("📭 No hay productos aún.")
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Muestra estadísticas del catálogo"""
+    productos = cargar_productos()
+    
+    if not productos:
+        await update.message.reply_text(
+            "📊 *Estadísticas del Catálogo*\n\n"
+            "No hay productos registrados aún.",
+            parse_mode='Markdown'
+        )
         return
-    texto = "📋 Productos actuales:\n\n"
-    for i, p in enumerate(sorted(productos_db.values(), key=lambda x: x.get("fecha",""), reverse=True), 1):
-        texto += f"{i}. {p.get('nombre')} — ${p.get('precio')}\n   id: {p.get('id')}\n\n"
-    await update.message.reply_text(texto)
+    
+    total = len(productos)
+    con_imagen = sum(1 for p in productos if p.get('imagen'))
+    precio_promedio = sum(p['precio'] for p in productos) / total
+    precio_min = min(p['precio'] for p in productos)
+    precio_max = max(p['precio'] for p in productos)
+    
+    await update.message.reply_text(
+        f"📊 *Estadísticas del Catálogo*\n\n"
+        f"📦 Total de productos: {total}\n"
+        f"🖼️ Con imagen: {con_imagen}\n"
+        f"💰 Precio promedio: ${precio_promedio:,.2f}\n"
+        f"💵 Precio mínimo: ${precio_min:,.2f}\n"
+        f"💎 Precio máximo: ${precio_max:,.2f}",
+        parse_mode='Markdown'
+    )
 
-# Conversación para agregar producto paso a paso
-@solo_admins
-async def agregar_inicio(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data.clear()
-    await update.message.reply_text("🆕 Paso 1/5 - Nombre del producto (o /cancelar):")
+async def agregar_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Inicia el proceso de agregar producto"""
+    await update.message.reply_text(
+        "✨ *Agregar Nuevo Producto*\n\n"
+        "Paso 1/5: ¿Cuál es el *nombre* del producto?\n\n"
+        "_(Envía /cancelar en cualquier momento para cancelar)_",
+        parse_mode='Markdown'
+    )
     return NOMBRE
 
 async def recibir_nombre(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['nombre'] = update.message.text.strip()
-    await update.message.reply_text("💰 Paso 2/5 - Precio (solo números):")
+    """Recibe el nombre del producto"""
+    user_id = update.effective_user.id
+    nombre = update.message.text.strip()
+    
+    if not nombre or len(nombre) < 3:
+        await update.message.reply_text(
+            "❌ El nombre debe tener al menos 3 caracteres.\n"
+            "Intenta nuevamente:"
+        )
+        return NOMBRE
+    
+    if user_id not in productos_temp:
+        productos_temp[user_id] = {}
+    productos_temp[user_id]['nombre'] = nombre
+    
+    await update.message.reply_text(
+        f"✅ Nombre guardado: *{nombre}*\n\n"
+        "Paso 2/5: ¿Cuál es el *precio* del producto?\n\n"
+        "Ejemplos válidos:\n"
+        "• 150000\n"
+        "• 150.50\n"
+        "• 1500",
+        parse_mode='Markdown'
+    )
     return PRECIO
 
 async def recibir_precio(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    texto = update.message.text.strip().replace("$", "").replace(",", "")
+    """Recibe el precio del producto"""
+    user_id = update.effective_user.id
+    precio_text = update.message.text.strip()
+    
     try:
-        precio = float(texto)
-    except:
-        await update.message.reply_text("❌ Precio inválido. Escribe solo números. Ej: 189.99")
+        precio = float(precio_text.replace(',', '').replace('$', ''))
+        if precio <= 0:
+            raise ValueError("Precio debe ser positivo")
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Precio inválido. Debe ser un número positivo.\n\n"
+            "Ejemplos: 150000, 150.50, 1500\n"
+            "Intenta nuevamente:"
+        )
         return PRECIO
-    context.user_data['precio'] = f"{precio:.2f}"
-    await update.message.reply_text("📝 Paso 3/5 - Descripción (o /saltar):")
+    
+    productos_temp[user_id]['precio'] = precio
+    
+    await update.message.reply_text(
+        f"✅ Precio guardado: *${precio:,.2f}*\n\n"
+        "Paso 3/5: Escribe una *descripción* del producto\n\n"
+        "La descripción ayuda a los clientes a conocer mejor el producto.\n"
+        "_(Escribe '-' para omitir)_",
+        parse_mode='Markdown'
+    )
     return DESCRIPCION
 
 async def recibir_descripcion(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['descripcion'] = update.message.text.strip()
-    await update.message.reply_text("📏 Paso 4/5 - Tallas (ej: 36-44 o 38,40,42) (o /saltar):")
+    """Recibe la descripción del producto"""
+    user_id = update.effective_user.id
+    descripcion = update.message.text.strip()
+    
+    if descripcion == '-':
+        descripcion = ''
+    
+    productos_temp[user_id]['descripcion'] = descripcion
+    
+    desc_preview = f": {descripcion[:50]}..." if descripcion else ""
+    await update.message.reply_text(
+        f"✅ Descripción guardada{desc_preview}\n\n"
+        "Paso 4/5: ¿Qué *tallas* están disponibles?\n\n"
+        "Ejemplos:\n"
+        "• 36-42\n"
+        "• 38, 40, 42\n"
+        "• S, M, L, XL\n"
+        "_(Escribe '-' para omitir)_",
+        parse_mode='Markdown'
+    )
     return TALLAS
 
 async def recibir_tallas(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['tallas'] = update.message.text.strip()
-    await update.message.reply_text("🖼️ Paso 5/5 - URL de la imagen (o /saltar):")
+    """Recibe las tallas del producto"""
+    user_id = update.effective_user.id
+    tallas = update.message.text.strip()
+    
+    if tallas == '-':
+        tallas = ''
+    
+    productos_temp[user_id]['tallas'] = tallas
+    
+    await update.message.reply_text(
+        f"✅ Tallas guardadas: *{tallas if tallas else 'No especificadas'}*\n\n"
+        "Paso 5/5: Envía una *foto* del producto 📸\n\n"
+        "Una buena imagen aumenta las ventas.\n"
+        "_(Escribe '-' para omitir)_",
+        parse_mode='Markdown'
+    )
     return IMAGEN
 
 async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Acepta texto con URL o si envían foto, obtener file URL (opcional)
-    img_url = ""
+    """Recibe la imagen del producto y guarda todo"""
+    user_id = update.effective_user.id
+    
+    imagen_url = ''
     if update.message.photo:
-        # Si envían foto, obtener file_path (nota: en polling esto requiere descargar vía get_file y alojarla en un host accesible)
-        file = await update.message.photo[-1].get_file()
-        img_url = file.file_path  # esto no es persistente público; mejor enviar URL externa
+        photo = update.message.photo[-1]
+        file = await context.bot.get_file(photo.file_id)
+        imagen_url = file.file_path
+    elif update.message.text and update.message.text.strip() == '-':
+        imagen_url = ''
     else:
-        img_url = update.message.text.strip()
-    context.user_data['imagen'] = img_url
-    # Finalizar
-    return await finalizar_producto(update, context)
-
-async def saltar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Avanza al siguiente paso según lo que falte
-    if 'descripcion' not in context.user_data:
-        context.user_data['descripcion'] = ""
-        await update.message.reply_text("⏭️ Descripción omitida.\n📏 Tallas (o /saltar):")
-        return TALLAS
-    if 'tallas' not in context.user_data:
-        context.user_data['tallas'] = ""
-        await update.message.reply_text("⏭️ Tallas omitidas.\n🖼️ URL de imagen (o /saltar):")
+        await update.message.reply_text(
+            "❌ Por favor envía una foto o escribe '-' para omitir:"
+        )
         return IMAGEN
-    context.user_data['imagen'] = ""
-    return await finalizar_producto(update, context)
-
-async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data.clear()
-    await update.message.reply_text("❌ Proceso cancelado.")
+    
+    # Crear producto
+    producto = productos_temp[user_id].copy()
+    producto['imagen'] = imagen_url
+    producto['fecha'] = datetime.now().isoformat()
+    
+    # Cargar productos existentes
+    productos = cargar_productos()
+    
+    # Generar ID único
+    producto['id'] = f"producto:{len(productos) + 1}"
+    
+    # Agregar nuevo producto
+    productos.append(producto)
+    
+    # Guardar
+    if guardar_productos(productos):
+        # Crear mensaje de confirmación
+        mensaje = (
+            "✅ *¡Producto agregado exitosamente!*\n\n"
+            f"📦 *{producto['nombre']}*\n"
+            f"💰 Precio: ${producto['precio']:,.2f}\n"
+        )
+        
+        if producto.get('descripcion'):
+            mensaje += f"📝 {producto['descripcion'][:100]}\n"
+        
+        if producto.get('tallas'):
+            mensaje += f"📏 Tallas: {producto['tallas']}\n"
+        
+        if imagen_url:
+            mensaje += "📸 Con imagen\n"
+        
+        mensaje += (
+            f"\n🆔 ID: {len(productos)}\n"
+            f"📊 Total en catálogo: {len(productos)}\n\n"
+            "El producto ya está visible en el catálogo web ✨\n"
+            "Usa /agregar para añadir otro producto."
+        )
+        
+        await update.message.reply_text(mensaje, parse_mode='Markdown')
+        
+        # Limpiar datos temporales
+        del productos_temp[user_id]
+    else:
+        await update.message.reply_text(
+            "❌ Error al guardar el producto. Por favor intenta nuevamente."
+        )
+    
     return ConversationHandler.END
 
-async def finalizar_producto(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        temp = context.user_data
-        producto = {
-            "id": f"producto_{int(datetime.utcnow().timestamp())}",
-            "nombre": temp.get("nombre", ""),
-            "precio": temp.get("precio", "0.00"),
-            "descripcion": temp.get("descripcion", ""),
-            "tallas": temp.get("tallas", ""),
-            "imagen": temp.get("imagen", ""),
-            "fecha": datetime.utcnow().isoformat()
-        }
-        productos_db[producto["id"]] = producto
+async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Cancela la operación actual"""
+    user_id = update.effective_user.id
+    if user_id in productos_temp:
+        del productos_temp[user_id]
+    
+    await update.message.reply_text(
+        "❌ *Operación cancelada*\n\n"
+        "Usa /start para ver los comandos disponibles.",
+        parse_mode='Markdown'
+    )
+    return ConversationHandler.END
 
-        saved = save_and_push_productos()
-        if saved:
-            await update.message.reply_text(f"✅ Producto *{producto['nombre']}* agregado y publicado.\n🌐 Se actualizó el catálogo público.", parse_mode="Markdown")
-        else:
-            await update.message.reply_text("⚠️ Producto guardado localmente, pero hubo un error subiendo a GitHub. Revisa logs.")
-        context.user_data.clear()
-        return ConversationHandler.END
-    except Exception as e:
-        await update.message.reply_text(f"❌ Error al guardar: {e}")
-        context.user_data.clear()
-        return ConversationHandler.END
-
-# Handler simple para formato rápido "Nombre | Precio | URL"
-@solo_admins
-async def texto_rapido_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    texto = update.message.text
-    if "|" not in texto:
-        await update.message.reply_text("Formato no reconocido. Usa /agregar o: Nombre | Precio | URL")
+async def listar_productos(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Lista todos los productos"""
+    productos = cargar_productos()
+    
+    if not productos:
+        await update.message.reply_text(
+            "📦 *Catálogo vacío*\n\n"
+            "No hay productos registrados.\n"
+            "Usa /agregar para añadir el primero.",
+            parse_mode='Markdown'
+        )
         return
-    try:
-        nombre, precio, imagen = [x.strip() for x in texto.split("|", 2)]
-        producto = {
-            "id": f"producto_{int(datetime.utcnow().timestamp())}",
-            "nombre": nombre,
-            "precio": precio.replace("$",""),
-            "descripcion": "",
-            "tallas": "",
-            "imagen": imagen,
-            "fecha": datetime.utcnow().isoformat()
-        }
-        productos_db[producto["id"]] = producto
-        saved = save_and_push_productos()
-        if saved:
-            await update.message.reply_text(f"✅ Producto *{nombre}* agregado y publicado.", parse_mode="Markdown")
-        else:
-            await update.message.reply_text("⚠️ Error subiendo a GitHub, producto guardado localmente.")
-    except Exception as e:
-        await update.message.reply_text(f"❌ Error: {e}")
+    
+    # Enviar en bloques de 10
+    bloques = [productos[i:i+10] for i in range(0, len(productos), 10)]
+    
+    for idx_bloque, bloque in enumerate(bloques):
+        mensaje = f"📋 *Productos en el catálogo* (Parte {idx_bloque + 1}/{len(bloques)})\n\n"
+        
+        for i, prod in enumerate(bloque, idx_bloque * 10 + 1):
+            mensaje += (
+                f"*{i}.* {prod['nombre']}\n"
+                f"   💰 ${prod['precio']:,.2f}"
+            )
+            
+            if prod.get('tallas'):
+                mensaje += f" | 📏 {prod['tallas']}"
+            
+            if prod.get('imagen'):
+                mensaje += " | 📸"
+            
+            mensaje += "\n\n"
+        
+        if idx_bloque == len(bloques) - 1:
+            mensaje += f"📊 Total: *{len(productos)}* productos"
+        
+        await update.message.reply_text(mensaje, parse_mode='Markdown')
 
-# -------------------------
-# ARRANQUE
-# -------------------------
+async def eliminar_producto(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Elimina un producto por número"""
+    if not context.args:
+        await update.message.reply_text(
+            "❌ *Uso incorrecto*\n\n"
+            "Formato: /eliminar [número]\n\n"
+            "Ejemplo: /eliminar 3\n\n"
+            "Usa /listar para ver los números de productos.",
+            parse_mode='Markdown'
+        )
+        return
+    
+    try:
+        numero = int(context.args[0])
+        productos = cargar_productos()
+        
+        if numero < 1 or numero > len(productos):
+            await update.message.reply_text(
+                f"❌ Número inválido.\n\n"
+                f"Debe ser entre 1 y {len(productos)}.\n"
+                f"Usa /listar para ver los productos.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        producto_eliminado = productos.pop(numero - 1)
+        
+        if guardar_productos(productos):
+            await update.message.reply_text(
+                f"✅ *Producto eliminado*\n\n"
+                f"📦 {producto_eliminado['nombre']}\n"
+                f"💰 ${producto_eliminado['precio']:,.2f}\n\n"
+                f"📊 Quedan {len(productos)} productos en el catálogo.",
+                parse_mode='Markdown'
+            )
+        else:
+            await update.message.reply_text(
+                "❌ Error al eliminar el producto."
+            )
+        
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Debes proporcionar un número válido.\n\n"
+            "Ejemplo: /eliminar 3"
+        )
+    except Exception as e:
+        logger.error(f"Error eliminando producto: {e}")
+        await update.message.reply_text(
+            "❌ Error al eliminar el producto."
+        )
+
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Maneja errores"""
+    logger.error(f"Error: {context.error}")
+    if update and update.effective_message:
+        await update.effective_message.reply_text(
+            "❌ Ocurrió un error inesperado.\n"
+            "Por favor intenta nuevamente."
+        )
+
 def main():
-    # Validaciones iniciales
-    missing = []
-    if not BOT_TOKEN:
-        missing.append("BOT_TOKEN")
-    if not GITHUB_USER:
-        missing.append("GITHUB_USER")
-    if not GITHUB_REPO:
-        missing.append("GITHUB_REPO")
-    if not GITHUB_TOKEN:
-        missing.append("GITHUB_TOKEN")
-    if ADMIN_ID == 0:
-        missing.append("ADMIN_ID")
-
-    if missing:
-        print("ERROR: faltan variables de entorno:", ", ".join(missing))
+    """Función principal"""
+    TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+    
+    if not TOKEN:
+        logger.error("❌ Error: TELEGRAM_BOT_TOKEN no configurado en las variables de entorno")
+        logger.info("💡 Configura el token en Render:")
+        logger.info("   1. Ve a tu servicio en Render")
+        logger.info("   2. Environment > Environment Variables")
+        logger.info("   3. Agrega: TELEGRAM_BOT_TOKEN = tu_token")
         return
-
-    # Intentar clonar/pull repo y cargar productos.json existente (si hay)
-    ensure_repo()
-    global productos_db
-    productos_db = load_productos_from_disk() or {}
-
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    # Comandos
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("ayuda", ayuda))
-    app.add_handler(CommandHandler("listar", listar))
-    app.add_handler(CommandHandler("catalogo", catalogo))
-
-    # Conversación /agregar
-    conv = ConversationHandler(
-        entry_points=[CommandHandler("agregar", agregar_inicio)],
+    
+    # Inicializar archivo de productos si no existe
+    if not os.path.exists(PRODUCTOS_FILE):
+        guardar_productos([])
+        logger.info(f"✅ Archivo {PRODUCTOS_FILE} creado")
+    
+    # Crear aplicación
+    application = Application.builder().token(TOKEN).build()
+    
+    # Conversation handler para agregar productos
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('agregar', agregar_start)],
         states={
             NOMBRE: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_nombre)],
             PRECIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_precio)],
-            DESCRIPCION: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_descripcion), CommandHandler("saltar", saltar)],
-            TALLAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_tallas), CommandHandler("saltar", saltar)],
-            IMAGEN: [MessageHandler((filters.TEXT | filters.PHOTO) & ~filters.COMMAND, recibir_imagen), CommandHandler("saltar", saltar)]
+            DESCRIPCION: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_descripcion)],
+            TALLAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_tallas)],
+            IMAGEN: [
+                MessageHandler(filters.PHOTO, recibir_imagen),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_imagen)
+            ],
         },
-        fallbacks=[CommandHandler("cancelar", cancelar)]
+        fallbacks=[CommandHandler('cancelar', cancelar)],
     )
-    app.add_handler(conv)
+    
+    # Registrar handlers
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("ayuda", ayuda))
+    application.add_handler(CommandHandler("stats", stats))
+    application.add_handler(conv_handler)
+    application.add_handler(CommandHandler("listar", listar_productos))
+    application.add_handler(CommandHandler("eliminar", eliminar_producto))
+    application.add_error_handler(error_handler)
+    
+    # Iniciar bot
+    logger.info("=" * 50)
+    logger.info("🤖 Bot de Catálogo Premium iniciado")
+    logger.info("=" * 50)
+    logger.info("✅ Bot listo para recibir comandos")
+    logger.info("📱 Escribe /start en Telegram para comenzar")
+    logger.info("=" * 50)
+    
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
-    # Modo rápido (texto con barras)
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, texto_rapido_handler))
-
-    print("🤖 Bot iniciado. Esperando mensajes...")
-    app.run_polling(drop_pending_updates=True)
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
