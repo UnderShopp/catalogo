@@ -671,15 +671,27 @@
             }, CONFIG.autoRefreshSeconds * 1000);
         }
 
-        function getRandomPhone() {
-            return CONFIG.whatsappNumbers[Math.floor(Math.random() * CONFIG.whatsappNumbers.length)];
+        function getPhone() {
+          const phones = CONFIG.whatsappNumbers;
+          return phones[Math.floor(Math.random() * phones.length)];
         }
-
-        function consultarProducto(event, nombre, precio, tallas) {
-            event.preventDefault();
-            const phone = getRandomPhone();
-            const mensaje = `¡Hola! 👋 Estoy interesado en:\n\n👟 *${nombre}*\n💰 Precio: $${parseFloat(precio).toFixed(2)}\n${tallas ? `📏 Tallas: ${tallas}\n` : ''}\n¿Está disponible?`;
-            window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(mensaje)}`, '_blank');
+        
+        function consultar(e, nombre, precio, tallas) {
+          e.stopPropagation();
+          const phone = getPhone();
+          const precioFormateado = formatPrice(precio);
+          const msg = `👋 Hola, estoy interesado en:\n\n${nombre}\n💰 Precio: $${precioFormateado}\n${tallas ? `📏 Tallas: ${tallas}` : ''}\n\n¿Está disponible?`;
+          window.open(`https://wa.me/${phone.replace('+','')}?text=${encodeURIComponent(msg)}`,'_blank');
+        }
+        function filterByCategory(category) {
+          if (category === 'todos') {
+            filteredProducts = [...allProducts];
+          } else {
+            filteredProducts = allProducts.filter(p => 
+              (p.categoria || 'zapatillas').toLowerCase() === category.toLowerCase()
+            );
+          }
+          render();
         }
 
         function contactarVendedor(event) {
