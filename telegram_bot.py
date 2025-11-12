@@ -84,9 +84,25 @@ def save_and_push_productos():
             return False
         
         ruta = LOCAL_REPO_PATH / JSON_FILENAME
-        lista = list(productos_db.values())
+
+        # 🧩 NUEVO: cargar productos existentes antes de escribir
+        productos_existentes = []
+        if ruta.exists():
+            try:
+                with ruta.open("r", encoding="utf-8") as f:
+                    productos_existentes = json.load(f)
+                    if not isinstance(productos_existentes, list):
+                        productos_existentes = []
+            except Exception:
+                productos_existentes = []
+
+        # 🔁 combinar los productos existentes con los actuales del bot
+        productos_actualizados = {p.get("id"): p for p in productos_existentes if isinstance(p, dict) and "id" in p}
+        productos_actualizados.update(productos_db)
+        lista = list(productos_actualizados.values())
+
         print(f"✍️ Escribiendo {len(lista)} productos...")
-        
+
         with ruta.open("w", encoding="utf-8") as f:
             json.dump(lista, f, ensure_ascii=False, indent=2)
         print("✅ Archivo JSON actualizado.")
