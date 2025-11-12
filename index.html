@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo Premium - Zapatos de Alta Calidad</title>
+    <title>Under Shopp - Catálogo Premium</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -138,6 +138,41 @@
             transform: translateY(-50%);
             color: var(--gold);
             font-size: 1.3rem;
+        }
+
+        .categories {
+            max-width: 1400px;
+            margin: 2rem auto 1rem;
+            padding: 0 3rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .category-btn {
+            padding: 0.8rem 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1.5px solid rgba(212, 175, 55, 0.3);
+            border-radius: 30px;
+            color: var(--white);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            font-size: 0.95rem;
+        }
+
+        .category-btn:hover {
+            background: rgba(212, 175, 55, 0.2);
+            border-color: var(--gold);
+        }
+
+        .category-btn.active {
+            background: linear-gradient(135deg, var(--gold), #f4e4a6);
+            color: var(--primary);
+            border-color: var(--gold);
+            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
         }
 
         .stats-bar {
@@ -447,13 +482,17 @@
             margin-top: 1rem;
         }
 
-        @media (max-width: 768px) {
+                    @media (max-width: 768px) {
             .header-content {
                 padding: 1.5rem;
             }
 
             .brand-text h1 {
                 font-size: 1.8rem;
+            }
+
+            .categories {
+                padding: 0 1.5rem;
             }
 
             .stats-bar {
@@ -497,6 +536,12 @@
             </div>
         </div>
     </header>
+
+    <div class="categories">
+        <button class="category-btn active" onclick="filterCategory('todos')">📦 Todos</button>
+        <button class="category-btn" onclick="filterCategory('zapatillas')">👟 Zapatillas</button>
+        <button class="category-btn" onclick="filterCategory('ropa')">👕 Ropa</button>
+    </div>
 
     <div class="stats-bar">
         <div class="stat-item">
@@ -547,21 +592,21 @@
     </footer>
 
     <script>
-        // ⚙️ CONFIGURACIÓN
         const CONFIG = {
             whatsappNumbers: [
                 '+573214885822',
                 '+573004429451',
                 '+573212694280'
             ],
-            autoRefreshSeconds: 30,
-            productosJsonUrl: './productos.json' // 👈 Ruta al JSON generado por el bot
+            autoRefreshSeconds: 30
         };
 
         let allProducts = [];
         let filteredProducts = [];
+        let currentCategory = 'todos';
 
         window.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Cargando productos...');
             await loadProducts();
             setupSearch();
             startAutoRefresh();
@@ -569,22 +614,26 @@
 
         async function loadProducts() {
             try {
-                const response = await fetch('productos.json');
+                console.log('📡 Fetch productos.json...');
+                const response = await fetch('productos.json?t=' + Date.now());
+                
+                console.log('📊 Response status:', response.status);
                 
                 if (!response.ok) {
-                    console.error('Error cargando productos.json');
-                    return showEmptyState();
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
         
                 const data = await response.json();
+                console.log('📦 Datos recibidos:', data);
                 
-                // El bot guarda un array directo
                 allProducts = Array.isArray(data) ? data : [];
                 filteredProducts = [...allProducts];
+                
+                console.log(`✅ ${allProducts.length} productos cargados`);
                 renderProducts();
         
             } catch (error) {
-                console.error('Error:', error);
+                console.error('❌ Error cargando productos:', error);
                 showEmptyState();
             }
         }
@@ -596,15 +645,17 @@
             productCount.textContent = filteredProducts.length;
             
             if (filteredProducts.length === 0) {
+                console.log('⚠️ No hay productos para mostrar');
                 showEmptyState();
                 return;
             }
             
+            console.log('🎨 Renderizando productos...');
             grid.innerHTML = filteredProducts.map(producto => `
                 <div class="product-card">
                     <div class="product-image">
                         ${producto.imagen 
-                            ? `<img src="${producto.imagen}" alt="${producto.nombre}" onerror="this.parentElement.innerHTML='<div class=\\'placeholder-icon\\'>👟</div>'">`
+                            ? `<img src="${producto.imagen}" alt="${escapeHtml(producto.nombre)}" onerror="this.parentElement.innerHTML='<div class=\\'placeholder-icon\\'>👟</div>'">`
                             : '<div class="placeholder-icon">👟</div>'
                         }
                         <div class="product-badge">Premium</div>
@@ -618,7 +669,7 @@
                         <div class="product-details">
                             <div class="price-section">
                                 <div class="price-label">Precio</div>
-                                <div class="product-price">$${parseFloat(producto.precio).toFixed(2)}</div>
+                                <div class="product-price">$${formatPrice(producto.precio)}</div>
                                 ${producto.tallas 
                                     ? `<div class="product-sizes">
                                         <span>📏</span>
@@ -627,7 +678,7 @@
                                     : ''
                                 }
                             </div>
-                            <a href="#" class="whatsapp-btn" onclick="consultarProducto(event, '${escapeHtml(producto.nombre)}', ${producto.precio}, '${escapeHtml(producto.tallas || '')}')">
+                            <a href="#" class="whatsapp-btn" onclick="consultarProducto(event, '${escapeHtml(producto.nombre)}', '${producto.precio}', '${escapeHtml(producto.tallas || '')}')">
                                 <span>💬</span>
                                 <span>Consultar por WhatsApp</span>
                             </a>
@@ -635,6 +686,15 @@
                     </div>
                 </div>
             `).join('');
+        }
+
+        function formatPrice(price) {
+            const num = parseFloat(price);
+            if (isNaN(num)) return price;
+            return num.toLocaleString('es-CO', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
         }
 
         function showEmptyState() {
@@ -654,10 +714,14 @@
             searchInput.addEventListener('input', (e) => {
                 const searchTerm = e.target.value.toLowerCase().trim();
                 
+                let baseProducts = currentCategory === 'todos' 
+                    ? allProducts 
+                    : allProducts.filter(p => (p.categoria || 'zapatillas').toLowerCase() === currentCategory);
+                
                 if (searchTerm === '') {
-                    filteredProducts = [...allProducts];
+                    filteredProducts = baseProducts;
                 } else {
-                    filteredProducts = allProducts.filter(producto => 
+                    filteredProducts = baseProducts.filter(producto => 
                         producto.nombre.toLowerCase().includes(searchTerm) ||
                         (producto.descripcion && producto.descripcion.toLowerCase().includes(searchTerm)) ||
                         (producto.tallas && producto.tallas.toLowerCase().includes(searchTerm))
@@ -667,33 +731,49 @@
             });
         }
 
+        function filterCategory(category) {
+            console.log('🔍 Filtrando por:', category);
+            currentCategory = category;
+            
+            // Actualizar botones activos
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Filtrar productos
+            if (category === 'todos') {
+                filteredProducts = [...allProducts];
+            } else {
+                filteredProducts = allProducts.filter(p => 
+                    (p.categoria || 'zapatillas').toLowerCase() === category.toLowerCase()
+                );
+            }
+            
+            // Limpiar búsqueda
+            document.getElementById('searchInput').value = '';
+            
+            console.log(`✅ ${filteredProducts.length} productos en categoría ${category}`);
+            renderProducts();
+        }
+
         function startAutoRefresh() {
             setInterval(() => {
+                console.log('🔄 Auto-refresh...');
                 loadProducts();
             }, CONFIG.autoRefreshSeconds * 1000);
         }
 
-        function getPhone() {
-          const phones = CONFIG.whatsappNumbers;
-          return phones[Math.floor(Math.random() * phones.length)];
+        function getRandomPhone() {
+            return CONFIG.whatsappNumbers[Math.floor(Math.random() * CONFIG.whatsappNumbers.length)];
         }
-        
-        function consultar(e, nombre, precio, tallas) {
-          e.stopPropagation();
-          const phone = getPhone();
-          const precioFormateado = formatPrice(precio);
-          const msg = `👋 Hola, estoy interesado en:\n\n${nombre}\n💰 Precio: $${precioFormateado}\n${tallas ? `📏 Tallas: ${tallas}` : ''}\n\n¿Está disponible?`;
-          window.open(`https://wa.me/${phone.replace('+','')}?text=${encodeURIComponent(msg)}`,'_blank');
-        }
-        function filterByCategory(category) {
-          if (category === 'todos') {
-            filteredProducts = [...allProducts];
-          } else {
-            filteredProducts = allProducts.filter(p => 
-              (p.categoria || 'zapatillas').toLowerCase() === category.toLowerCase()
-            );
-          }
-          render();
+
+        function consultarProducto(event, nombre, precio, tallas) {
+            event.preventDefault();
+            const phone = getRandomPhone();
+            const precioFormateado = formatPrice(precio);
+            const mensaje = `¡Hola! 👋 Estoy interesado en:\n\n👟 *${nombre}*\n💰 Precio: $${precioFormateado}\n${tallas ? `📏 Tallas: ${tallas}\n` : ''}\n¿Está disponible?`;
+            window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(mensaje)}`, '_blank');
         }
 
         function contactarVendedor(event) {
