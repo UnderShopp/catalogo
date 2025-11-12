@@ -5,15 +5,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    MessageHandler,
-    CallbackQueryHandler,
-    filters,
-    ContextTypes,
-    ConversationHandler
-)
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes, ConversationHandler
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_IDS_STR = os.getenv("ADMIN_IDS", "")
@@ -50,22 +42,14 @@ def ensure_repo():
         if not LOCAL_REPO_PATH.exists():
             print("Clonando repo...")
             LOCAL_REPO_PATH.mkdir(parents=True, exist_ok=True)
-            result = subprocess.run(
-                ["git", "clone", repo_url_with_token(), str(LOCAL_REPO_PATH)],
-                capture_output=True,
-                text=True
-            )
+            result = subprocess.run(["git", "clone", repo_url_with_token(), str(LOCAL_REPO_PATH)], capture_output=True, text=True)
             if result.returncode != 0:
                 print(f"Error clonando: {result.stderr}")
                 return False
             print("Repo clonado")
         else:
             print("Actualizando repo...")
-            result = subprocess.run(
-                ["git", "-C", str(LOCAL_REPO_PATH), "pull"],
-                capture_output=True,
-                text=True
-            )
+            result = subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "pull"], capture_output=True, text=True)
             if result.returncode != 0:
                 print(f"Error en pull: {result.stderr}")
             else:
@@ -96,44 +80,27 @@ def save_and_push_productos():
         if not ok:
             print("No se pudo acceder al repo")
             return False
-
         ruta = LOCAL_REPO_PATH / JSON_FILENAME
         lista = list(productos_db.values())
-        
         print(f"Escribiendo {len(lista)} productos")
         with ruta.open("w", encoding="utf-8") as f:
             json.dump(lista, f, ensure_ascii=False, indent=2)
         print("Archivo escrito")
-
         subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "config", "user.email", "bot@undershopp.local"], check=True)
         subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "config", "user.name", "UnderShoppBot"], check=True)
-        
         print("Git add...")
         subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "add", JSON_FILENAME], check=True)
-        
-        res = subprocess.run(
-            ["git", "-C", str(LOCAL_REPO_PATH), "status", "--porcelain"],
-            capture_output=True,
-            text=True
-        )
-        
+        res = subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "status", "--porcelain"], capture_output=True, text=True)
         if res.stdout.strip() == "":
             print("No hay cambios")
             return True
-
         print("Git commit...")
         mensaje = f"Bot: actualizacion {datetime.utcnow().isoformat()}"
         subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "commit", "-m", mensaje], check=True)
-        
         print("Git push...")
-        subprocess.run(
-            ["git", "-C", str(LOCAL_REPO_PATH), "push", repo_url_with_token(), REPO_BRANCH],
-            check=True,
-            capture_output=True
-        )
+        subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "push", repo_url_with_token(), REPO_BRANCH], check=True, capture_output=True)
         print("Push exitoso\n")
         return True
-        
     except subprocess.CalledProcessError as e:
         print(f"Error en git: {e}")
         if hasattr(e, 'stderr') and e.stderr:
@@ -158,12 +125,7 @@ def solo_admins(func):
 
 @solo_admins
 async def start(update, context):
-    await update.message.reply_text(
-        "Under Shopp Bot\n\n"
-        "/agregar - Agregar producto\n"
-        "/listar - Ver productos\n"
-        "/catalogo - Ver URL"
-    )
+    await update.message.reply_text("Under Shopp Bot\n\n/agregar - Agregar producto\n/listar - Ver productos\n/catalogo - Ver URL")
 
 @solo_admins
 async def catalogo(update, context):
@@ -209,14 +171,8 @@ async def recibir_descripcion(update, context):
 
 async def recibir_tallas(update, context):
     context.user_data['tallas'] = update.message.text.strip()
-    keyboard = [
-        [InlineKeyboardButton("Zapatillas", callback_data="cat_zapatillas")],
-        [InlineKeyboardButton("Ropa", callback_data="cat_ropa")]
-    ]
-    await update.message.reply_text(
-        "Paso 5/6: Categoria:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    keyboard = [[InlineKeyboardButton("Zapatillas", callback_data="cat_zapatillas")], [InlineKeyboardButton("Ropa", callback_data="cat_ropa")]]
+    await update.message.reply_text("Paso 5/6: Categoria:", reply_markup=InlineKeyboardMarkup(keyboard))
     return CATEGORIA
 
 async def recibir_categoria(update, context):
@@ -243,8 +199,7 @@ async def saltar(update, context):
         return TALLAS
     if 'tallas' not in context.user_data:
         context.user_data['tallas'] = ""
-        keyboard = [[InlineKeyboardButton("Zapatillas", callback_data="cat_zapatillas")],
-                    [InlineKeyboardButton("Ropa", callback_data="cat_ropa")]]
+        keyboard = [[InlineKeyboardButton("Zapatillas", callback_data="cat_zapatillas")], [InlineKeyboardButton("Ropa", callback_data="cat_ropa")]]
         await update.message.reply_text("Categoria:", reply_markup=InlineKeyboardMarkup(keyboard))
         return CATEGORIA
     context.user_data['imagen'] = ""
@@ -258,7 +213,6 @@ async def cancelar(update, context):
 async def finalizar_producto(update, context):
     try:
         temp = context.user_data
-        
         producto = {
             "id": f"producto_{int(datetime.utcnow().timestamp())}",
             "nombre": temp.get("nombre", ""),
@@ -269,20 +223,12 @@ async def finalizar_producto(update, context):
             "imagen": temp.get("imagen", ""),
             "fecha": datetime.utcnow().isoformat()
         }
-        
         productos_db[producto["id"]] = producto
-        
         saved = save_and_push_productos()
-        
         if saved:
-            await update.message.reply_text(
-                f"Producto agregado\n\n"
-                f"{producto['nombre']}\n"
-                f"${producto['precio']}"
-            )
+            await update.message.reply_text(f"Producto agregado\n\n{producto['nombre']}\n${producto['precio']}")
         else:
             await update.message.reply_text("Error al guardar en GitHub")
-        
         context.user_data.clear()
         return ConversationHandler.END
     except Exception as e:
@@ -297,22 +243,17 @@ def main():
     if not GITHUB_REPO: missing.append("GITHUB_REPO")
     if not GITHUB_TOKEN: missing.append("GITHUB_TOKEN")
     if not ADMIN_IDS: missing.append("ADMIN_IDS")
-
     if missing:
         print(f"Faltan: {', '.join(missing)}")
         return
-
     ensure_repo()
     global productos_db
     productos_lista = load_productos_from_disk()
     productos_db = {p.get("id", f"prod_{i}"): p for i, p in enumerate(productos_lista)}
-    
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("listar", listar))
     app.add_handler(CommandHandler("catalogo", catalogo))
-
     conv = ConversationHandler(
         entry_points=[CommandHandler("agregar", agregar_inicio)],
         states={
@@ -321,22 +262,13 @@ def main():
             DESCRIPCION: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_descripcion), CommandHandler("saltar", saltar)],
             TALLAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_tallas), CommandHandler("saltar", saltar)],
             CATEGORIA: [CallbackQueryHandler(recibir_categoria, pattern="^cat_")],
-            IMAGEN: [
-                MessageHandler(filters.PHOTO, recibir_imagen),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_imagen),
-                CommandHandler("saltar", saltar)
-            ]
+            IMAGEN: [MessageHandler(filters.PHOTO, recibir_imagen), MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_imagen), CommandHandler("saltar", saltar)]
         },
         fallbacks=[CommandHandler("cancelar", cancelar)]
     )
-    
     app.add_handler(conv)
-
     print("Bot iniciado\n")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
-    main()
-```
-
