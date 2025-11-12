@@ -349,25 +349,30 @@
     });
 
     async function loadProducts() {
-      try {
-        const list = await window.storage.list('producto:', true);
-        if (!list?.keys?.length) return showEmpty();
-
-        const products = [];
-        for (const key of list.keys) {
-          const data = await window.storage.get(key, true);
-          if (data?.value) products.push(JSON.parse(data.value));
-        }
-
-        products.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
-        allProducts = products;
-        filteredProducts = [...products];
-        render();
-      } catch (e) {
-        console.error(e);
-        showEmpty();
-      }
+  try {
+    // Leer directamente desde productos.json en GitHub
+    const response = await fetch('productos.json');
+    
+    if (!response.ok) {
+      console.error('Error cargando productos.json');
+      return showEmpty();
     }
+    
+    const products = await response.json();
+    
+    if (!products || products.length === 0) {
+      return showEmpty();
+    }
+
+    products.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+    allProducts = products;
+    filteredProducts = [...products];
+    render();
+  } catch (e) {
+    console.error('Error:', e);
+    showEmpty();
+  }
+  }
 
     function render() {
       const grid = document.getElementById('productsGrid');
