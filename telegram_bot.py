@@ -244,32 +244,55 @@ async def finalizar_producto(update, context):
         temp = context.user_data
         producto = {
             "id": f"producto_{int(datetime.now(timezone.utc).timestamp())}",
-            "nombre": temp.get("nombre", ""),
-            "precio": temp.get("precio", "0"),
-            "descripcion": temp.get("descripcion", ""),
-            "tallas": temp.get("tallas", ""),
-            "categoria": temp.get("categoria", "zapatillas"),
-            "imagen": temp.get("imagen", ""),
+            "nombre": temp.get("nombre", "").strip(),
+            "precio": temp.get("precio", "0").strip(),
+            "descripcion": temp.get("descripcion", "").strip(),
+            "tallas": temp.get("tallas", "").strip(),
+            "categoria": temp.get("categoria", "zapatillas").strip(),
+            "imagen": temp.get("imagen", "").strip(),
             "fecha": datetime.now(timezone.utc).isoformat()
         }
+
+        # ✅ Guardar en memoria antes de escribir al JSON
         productos_db[producto["id"]] = producto
+
+        # 💾 Guardar en productos.json y subir a GitHub
         saved = save_and_push_productos()
+
         if saved:
+            mensaje = (
+                "✅ ¡Producto agregado exitosamente!\n\n"
+                f"📦 *{producto['nombre']}*\n"
+                f"💰 ${float(producto['precio']):,.2f}\n"
+                f"📏 *Tallas:* {producto['tallas'] or 'N/A'}\n"
+                f"👕 *Categoría:* {producto['categoria'].capitalize()}\n\n"
+                "🛍️ El producto ya está visible en el catálogo web.\n"
+                "Usa /agregar para añadir otro producto."
+            )
+
+            # Si el producto tiene imagen, mostrarla junto con el texto
+            if producto["imagen"]:
+                await update.message.reply_photo(
+                    photo=producto["imagen"],
+                    caption=mensaje,
+                    parse_mode="Markdown"
+                )
+            else:
+                await update.message.reply_text(mensaje, parse_mode="Markdown")
+        else:
             await update.message.reply_text(
-                f"✅ *Producto agregado correctamente*\n\n"
-                f"📦 {producto['nombre']}\n"
-                f"💵 ${producto['precio']}\n"
-                f"👕 {producto['categoria'].capitalize()}",
+                "⚠️ *Error al guardar en GitHub.*\nVerifica conexión o credenciales.",
                 parse_mode="Markdown"
             )
-        else:
-            await update.message.reply_text("⚠️ *Error al guardar en GitHub*", parse_mode="Markdown")
+
         context.user_data.clear()
         return ConversationHandler.END
+
     except Exception as e:
         await update.message.reply_text(f"💥 Error: {e}")
         context.user_data.clear()
         return ConversationHandler.END
+
 
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
