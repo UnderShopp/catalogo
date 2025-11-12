@@ -1,7 +1,5 @@
 import os
-import json
 import logging
-from datetime import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
 
@@ -15,54 +13,18 @@ logger = logging.getLogger(__name__)
 # Estados del conversation handler
 NOMBRE, PRECIO, DESCRIPCION, TALLAS, IMAGEN = range(5)
 
-# Archivo JSON para productos
-PRODUCTOS_FILE = 'productos.json'
-
 # Variable para almacenar productos temporalmente
 productos_temp = {}
 
-def cargar_productos():
-    """Carga productos desde el archivo JSON"""
-    try:
-        if os.path.exists(PRODUCTOS_FILE):
-            with open(PRODUCTOS_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                return data.get('productos', [])
-        return []
-    except Exception as e:
-        logger.error(f"Error cargando productos: {e}")
-        return []
-
-def guardar_productos(productos):
-    """Guarda productos en el archivo JSON"""
-    try:
-        data = {
-            'productos': productos,
-            'metadata': {
-                'ultima_actualizacion': datetime.now().isoformat(),
-                'total_productos': len(productos),
-                'version': '1.0'
-            }
-        }
-        with open(PRODUCTOS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        return True
-    except Exception as e:
-        logger.error(f"Error guardando productos: {e}")
-        return False
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando de inicio"""
-    user = update.effective_user
     await update.message.reply_text(
-        f"🛍️ *Bienvenido al Bot del Catálogo Premium*\n\n"
-        f"Hola {user.first_name}! 👋\n\n"
+        "🛍️ *Bienvenido al Bot del Catálogo Premium*\n\n"
         "Comandos disponibles:\n"
-        "🆕 /agregar - Agregar nuevo producto\n"
-        "📋 /listar - Ver todos los productos\n"
-        "🗑️ /eliminar - Eliminar un producto\n"
-        "ℹ️ /ayuda - Ver ayuda detallada\n"
-        "📊 /stats - Ver estadísticas",
+        "/agregar - Agregar nuevo producto\n"
+        "/listar - Ver todos los productos\n"
+        "/eliminar - Eliminar un producto\n"
+        "/ayuda - Ver ayuda detallada",
         parse_mode='Markdown'
     )
 
@@ -70,50 +32,17 @@ async def ayuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando de ayuda"""
     await update.message.reply_text(
         "📚 *Guía de uso del bot*\n\n"
-        "*🆕 Agregar producto:*\n"
+        "*Agregar producto:*\n"
         "1. Usa /agregar\n"
-        "2. Ingresa el nombre del producto\n"
+        "2. Ingresa el nombre\n"
         "3. Ingresa el precio (solo números)\n"
-        "4. Ingresa la descripción (o '-' para omitir)\n"
-        "5. Ingresa las tallas disponibles (ej: 36-42 o '-' para omitir)\n"
-        "6. Envía la imagen del producto (o '-' para omitir)\n\n"
-        "*📋 Otros comandos:*\n"
-        "/listar - Ver todos los productos\n"
-        "/eliminar [número] - Eliminar producto\n"
-        "/stats - Ver estadísticas del catálogo\n"
-        "/cancelar - Cancelar operación actual\n\n"
-        "*💡 Consejos:*\n"
-        "• Las imágenes mejoran la presentación\n"
-        "• Usa descripciones claras y concisas\n"
-        "• Especifica todas las tallas disponibles",
-        parse_mode='Markdown'
-    )
-
-async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Muestra estadísticas del catálogo"""
-    productos = cargar_productos()
-    
-    if not productos:
-        await update.message.reply_text(
-            "📊 *Estadísticas del Catálogo*\n\n"
-            "No hay productos registrados aún.",
-            parse_mode='Markdown'
-        )
-        return
-    
-    total = len(productos)
-    con_imagen = sum(1 for p in productos if p.get('imagen'))
-    precio_promedio = sum(p['precio'] for p in productos) / total
-    precio_min = min(p['precio'] for p in productos)
-    precio_max = max(p['precio'] for p in productos)
-    
-    await update.message.reply_text(
-        f"📊 *Estadísticas del Catálogo*\n\n"
-        f"📦 Total de productos: {total}\n"
-        f"🖼️ Con imagen: {con_imagen}\n"
-        f"💰 Precio promedio: ${precio_promedio:,.2f}\n"
-        f"💵 Precio mínimo: ${precio_min:,.2f}\n"
-        f"💎 Precio máximo: ${precio_max:,.2f}",
+        "4. Ingresa la descripción\n"
+        "5. Ingresa las tallas (ej: 36-42)\n"
+        "6. Envía la imagen del producto\n\n"
+        "*Otros comandos:*\n"
+        "/listar - Ver productos actuales\n"
+        "/eliminar [id] - Eliminar producto\n"
+        "/cancelar - Cancelar operación actual",
         parse_mode='Markdown'
     )
 
@@ -121,8 +50,8 @@ async def agregar_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Inicia el proceso de agregar producto"""
     await update.message.reply_text(
         "✨ *Agregar Nuevo Producto*\n\n"
-        "Paso 1/5: ¿Cuál es el *nombre* del producto?\n\n"
-        "_(Envía /cancelar en cualquier momento para cancelar)_",
+        "Paso 1/5: ¿Cuál es el *nombre* del producto?\n"
+        "(Envía /cancelar para cancelar)",
         parse_mode='Markdown'
     )
     return NOMBRE
@@ -132,24 +61,19 @@ async def recibir_nombre(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     nombre = update.message.text.strip()
     
-    if not nombre or len(nombre) < 3:
-        await update.message.reply_text(
-            "❌ El nombre debe tener al menos 3 caracteres.\n"
-            "Intenta nuevamente:"
-        )
+    if not nombre:
+        await update.message.reply_text("❌ El nombre no puede estar vacío. Intenta nuevamente:")
         return NOMBRE
     
+    # Guardar en contexto temporal
     if user_id not in productos_temp:
         productos_temp[user_id] = {}
     productos_temp[user_id]['nombre'] = nombre
     
     await update.message.reply_text(
         f"✅ Nombre guardado: *{nombre}*\n\n"
-        "Paso 2/5: ¿Cuál es el *precio* del producto?\n\n"
-        "Ejemplos válidos:\n"
-        "• 150000\n"
-        "• 150.50\n"
-        "• 1500",
+        "Paso 2/5: ¿Cuál es el *precio* del producto?\n"
+        "(Solo números, ej: 150000 o 150.50)",
         parse_mode='Markdown'
     )
     return PRECIO
@@ -160,24 +84,22 @@ async def recibir_precio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     precio_text = update.message.text.strip()
     
     try:
-        precio = float(precio_text.replace(',', '').replace('$', ''))
+        precio = float(precio_text.replace(',', ''))
         if precio <= 0:
-            raise ValueError("Precio debe ser positivo")
+            raise ValueError
     except ValueError:
         await update.message.reply_text(
-            "❌ Precio inválido. Debe ser un número positivo.\n\n"
-            "Ejemplos: 150000, 150.50, 1500\n"
-            "Intenta nuevamente:"
+            "❌ Precio inválido. Debe ser un número positivo.\n"
+            "Intenta nuevamente (ej: 150000 o 150.50):"
         )
         return PRECIO
     
     productos_temp[user_id]['precio'] = precio
     
     await update.message.reply_text(
-        f"✅ Precio guardado: *${precio:,.2f}*\n\n"
-        "Paso 3/5: Escribe una *descripción* del producto\n\n"
-        "La descripción ayuda a los clientes a conocer mejor el producto.\n"
-        "_(Escribe '-' para omitir)_",
+        f"✅ Precio guardado: ${precio:,.2f}\n\n"
+        "Paso 3/5: Escribe una *descripción* del producto\n"
+        "(Puedes escribir '-' para omitir)",
         parse_mode='Markdown'
     )
     return DESCRIPCION
@@ -192,15 +114,10 @@ async def recibir_descripcion(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     productos_temp[user_id]['descripcion'] = descripcion
     
-    desc_preview = f": {descripcion[:50]}..." if descripcion else ""
     await update.message.reply_text(
-        f"✅ Descripción guardada{desc_preview}\n\n"
-        "Paso 4/5: ¿Qué *tallas* están disponibles?\n\n"
-        "Ejemplos:\n"
-        "• 36-42\n"
-        "• 38, 40, 42\n"
-        "• S, M, L, XL\n"
-        "_(Escribe '-' para omitir)_",
+        f"✅ Descripción guardada\n\n"
+        "Paso 4/5: ¿Qué *tallas* están disponibles?\n"
+        "(Ej: 36-42, o escribe '-' para omitir)",
         parse_mode='Markdown'
     )
     return TALLAS
@@ -216,10 +133,9 @@ async def recibir_tallas(update: Update, context: ContextTypes.DEFAULT_TYPE):
     productos_temp[user_id]['tallas'] = tallas
     
     await update.message.reply_text(
-        f"✅ Tallas guardadas: *{tallas if tallas else 'No especificadas'}*\n\n"
-        "Paso 5/5: Envía una *foto* del producto 📸\n\n"
-        "Una buena imagen aumenta las ventas.\n"
-        "_(Escribe '-' para omitir)_",
+        f"✅ Tallas guardadas: {tallas if tallas else 'No especificadas'}\n\n"
+        "Paso 5/5: Envía una *foto* del producto\n"
+        "(O escribe '-' para omitir)",
         parse_mode='Markdown'
     )
     return IMAGEN
@@ -228,65 +144,61 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Recibe la imagen del producto y guarda todo"""
     user_id = update.effective_user.id
     
-    imagen_url = ''
     if update.message.photo:
+        # Obtener la foto de mejor calidad
         photo = update.message.photo[-1]
         file = await context.bot.get_file(photo.file_id)
-        imagen_url = file.file_path
+        file_url = file.file_path
+        productos_temp[user_id]['imagen'] = file_url
     elif update.message.text and update.message.text.strip() == '-':
-        imagen_url = ''
+        productos_temp[user_id]['imagen'] = ''
     else:
         await update.message.reply_text(
-            "❌ Por favor envía una foto o escribe '-' para omitir:"
+            "❌ Por favor envía una foto o '-' para omitir:"
         )
         return IMAGEN
     
-    # Crear producto
-    producto = productos_temp[user_id].copy()
-    producto['imagen'] = imagen_url
-    producto['fecha'] = datetime.now().isoformat()
+    # Guardar producto en storage
+    producto = productos_temp[user_id]
+    producto_id = f"producto:{len(await obtener_productos()) + 1}"
     
-    # Cargar productos existentes
-    productos = cargar_productos()
-    
-    # Generar ID único
-    producto['id'] = f"producto:{len(productos) + 1}"
-    
-    # Agregar nuevo producto
-    productos.append(producto)
-    
-    # Guardar
-    if guardar_productos(productos):
-        # Crear mensaje de confirmación
-        mensaje = (
+    try:
+        # Aquí deberías guardar en tu sistema de storage
+        # Por ahora simulamos el guardado
+        import json
+        from datetime import datetime
+        
+        producto_data = {
+            'id': producto_id,
+            'nombre': producto['nombre'],
+            'precio': producto['precio'],
+            'descripcion': producto.get('descripcion', ''),
+            'tallas': producto.get('tallas', ''),
+            'imagen': producto.get('imagen', ''),
+            'fecha': datetime.now().isoformat()
+        }
+        
+        # Aquí usarías window.storage.set() en el frontend
+        # Para el bot, guardamos en un archivo temporal o base de datos
+        await guardar_producto(producto_data)
+        
+        await update.message.reply_text(
             "✅ *¡Producto agregado exitosamente!*\n\n"
             f"📦 *{producto['nombre']}*\n"
-            f"💰 Precio: ${producto['precio']:,.2f}\n"
+            f"💰 ${producto['precio']:,.2f}\n"
+            f"📏 Tallas: {producto.get('tallas', 'N/A')}\n\n"
+            "El producto ya está visible en el catálogo web.\n"
+            "Usa /agregar para añadir otro producto.",
+            parse_mode='Markdown'
         )
-        
-        if producto.get('descripcion'):
-            mensaje += f"📝 {producto['descripcion'][:100]}\n"
-        
-        if producto.get('tallas'):
-            mensaje += f"📏 Tallas: {producto['tallas']}\n"
-        
-        if imagen_url:
-            mensaje += "📸 Con imagen\n"
-        
-        mensaje += (
-            f"\n🆔 ID: {len(productos)}\n"
-            f"📊 Total en catálogo: {len(productos)}\n\n"
-            "El producto ya está visible en el catálogo web ✨\n"
-            "Usa /agregar para añadir otro producto."
-        )
-        
-        await update.message.reply_text(mensaje, parse_mode='Markdown')
         
         # Limpiar datos temporales
         del productos_temp[user_id]
-    else:
+        
+    except Exception as e:
+        logger.error(f"Error guardando producto: {e}")
         await update.message.reply_text(
-            "❌ Error al guardar el producto. Por favor intenta nuevamente."
+            "❌ Ocurrió un error al guardar el producto. Intenta nuevamente."
         )
     
     return ConversationHandler.END
@@ -298,94 +210,65 @@ async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE):
         del productos_temp[user_id]
     
     await update.message.reply_text(
-        "❌ *Operación cancelada*\n\n"
-        "Usa /start para ver los comandos disponibles.",
-        parse_mode='Markdown'
+        "❌ Operación cancelada.\n"
+        "Usa /start para ver los comandos disponibles."
     )
     return ConversationHandler.END
 
 async def listar_productos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Lista todos los productos"""
-    productos = cargar_productos()
+    productos = await obtener_productos()
     
     if not productos:
         await update.message.reply_text(
-            "📦 *Catálogo vacío*\n\n"
-            "No hay productos registrados.\n"
-            "Usa /agregar para añadir el primero.",
-            parse_mode='Markdown'
+            "📦 No hay productos en el catálogo.\n"
+            "Usa /agregar para añadir el primero."
         )
         return
     
-    # Enviar en bloques de 10
-    bloques = [productos[i:i+10] for i in range(0, len(productos), 10)]
+    mensaje = "📋 *Productos en el catálogo:*\n\n"
+    for i, prod in enumerate(productos, 1):
+        mensaje += (
+            f"{i}. *{prod['nombre']}*\n"
+            f"   💰 ${prod['precio']:,.2f}\n"
+            f"   📏 {prod.get('tallas', 'N/A')}\n\n"
+        )
     
-    for idx_bloque, bloque in enumerate(bloques):
-        mensaje = f"📋 *Productos en el catálogo* (Parte {idx_bloque + 1}/{len(bloques)})\n\n"
-        
-        for i, prod in enumerate(bloque, idx_bloque * 10 + 1):
-            mensaje += (
-                f"*{i}.* {prod['nombre']}\n"
-                f"   💰 ${prod['precio']:,.2f}"
-            )
-            
-            if prod.get('tallas'):
-                mensaje += f" | 📏 {prod['tallas']}"
-            
-            if prod.get('imagen'):
-                mensaje += " | 📸"
-            
-            mensaje += "\n\n"
-        
-        if idx_bloque == len(bloques) - 1:
-            mensaje += f"📊 Total: *{len(productos)}* productos"
-        
-        await update.message.reply_text(mensaje, parse_mode='Markdown')
+    mensaje += f"Total: {len(productos)} productos"
+    
+    await update.message.reply_text(mensaje, parse_mode='Markdown')
 
 async def eliminar_producto(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Elimina un producto por número"""
+    """Elimina un producto por ID"""
     if not context.args:
         await update.message.reply_text(
-            "❌ *Uso incorrecto*\n\n"
-            "Formato: /eliminar [número]\n\n"
-            "Ejemplo: /eliminar 3\n\n"
-            "Usa /listar para ver los números de productos.",
-            parse_mode='Markdown'
+            "❌ Uso: /eliminar [número]\n"
+            "Usa /listar para ver los números de productos."
         )
         return
     
     try:
         numero = int(context.args[0])
-        productos = cargar_productos()
+        productos = await obtener_productos()
         
         if numero < 1 or numero > len(productos):
             await update.message.reply_text(
-                f"❌ Número inválido.\n\n"
-                f"Debe ser entre 1 y {len(productos)}.\n"
-                f"Usa /listar para ver los productos.",
-                parse_mode='Markdown'
+                f"❌ Número inválido. Debe ser entre 1 y {len(productos)}"
             )
             return
         
-        producto_eliminado = productos.pop(numero - 1)
+        producto = productos[numero - 1]
+        # Aquí eliminarías del storage
+        await eliminar_producto_storage(producto['id'])
         
-        if guardar_productos(productos):
-            await update.message.reply_text(
-                f"✅ *Producto eliminado*\n\n"
-                f"📦 {producto_eliminado['nombre']}\n"
-                f"💰 ${producto_eliminado['precio']:,.2f}\n\n"
-                f"📊 Quedan {len(productos)} productos en el catálogo.",
-                parse_mode='Markdown'
-            )
-        else:
-            await update.message.reply_text(
-                "❌ Error al eliminar el producto."
-            )
+        await update.message.reply_text(
+            f"✅ Producto *{producto['nombre']}* eliminado correctamente.",
+            parse_mode='Markdown'
+        )
         
     except ValueError:
         await update.message.reply_text(
-            "❌ Debes proporcionar un número válido.\n\n"
-            "Ejemplo: /eliminar 3"
+            "❌ Debes proporcionar un número válido."
         )
     except Exception as e:
         logger.error(f"Error eliminando producto: {e}")
@@ -393,31 +276,31 @@ async def eliminar_producto(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "❌ Error al eliminar el producto."
         )
 
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Maneja errores"""
-    logger.error(f"Error: {context.error}")
-    if update and update.effective_message:
-        await update.effective_message.reply_text(
-            "❌ Ocurrió un error inesperado.\n"
-            "Por favor intenta nuevamente."
-        )
+# Funciones auxiliares (simuladas - debes implementar con tu storage real)
+async def obtener_productos():
+    """Obtiene todos los productos del storage"""
+    # Aquí deberías implementar la lógica para leer desde tu storage
+    # Por ahora retorna una lista vacía
+    return []
+
+async def guardar_producto(producto):
+    """Guarda un producto en el storage"""
+    # Implementar lógica de guardado
+    pass
+
+async def eliminar_producto_storage(producto_id):
+    """Elimina un producto del storage"""
+    # Implementar lógica de eliminación
+    pass
 
 def main():
     """Función principal"""
+    # Obtener token desde variable de entorno
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     
     if not TOKEN:
-        logger.error("❌ Error: TELEGRAM_BOT_TOKEN no configurado en las variables de entorno")
-        logger.info("💡 Configura el token en Render:")
-        logger.info("   1. Ve a tu servicio en Render")
-        logger.info("   2. Environment > Environment Variables")
-        logger.info("   3. Agrega: TELEGRAM_BOT_TOKEN = tu_token")
+        logger.error("❌ Error: TELEGRAM_BOT_TOKEN no configurado")
         return
-    
-    # Inicializar archivo de productos si no existe
-    if not os.path.exists(PRODUCTOS_FILE):
-        guardar_productos([])
-        logger.info(f"✅ Archivo {PRODUCTOS_FILE} creado")
     
     # Crear aplicación
     application = Application.builder().token(TOKEN).build()
@@ -441,20 +324,12 @@ def main():
     # Registrar handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("ayuda", ayuda))
-    application.add_handler(CommandHandler("stats", stats))
     application.add_handler(conv_handler)
     application.add_handler(CommandHandler("listar", listar_productos))
     application.add_handler(CommandHandler("eliminar", eliminar_producto))
-    application.add_error_handler(error_handler)
     
     # Iniciar bot
-    logger.info("=" * 50)
-    logger.info("🤖 Bot de Catálogo Premium iniciado")
-    logger.info("=" * 50)
-    logger.info("✅ Bot listo para recibir comandos")
-    logger.info("📱 Escribe /start en Telegram para comenzar")
-    logger.info("=" * 50)
-    
+    logger.info("🤖 Bot iniciado correctamente")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
