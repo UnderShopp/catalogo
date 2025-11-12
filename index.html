@@ -569,20 +569,22 @@
 
         async function loadProducts() {
             try {
-                // Intentar cargar desde productos.json
-                const response = await fetch(CONFIG.productosJsonUrl);
+                const response = await fetch('productos.json');
                 
                 if (!response.ok) {
-                    throw new Error('No se pudo cargar productos.json');
+                    console.error('Error cargando productos.json');
+                    return showEmptyState();
                 }
-
+        
                 const data = await response.json();
-                allProducts = data.productos || [];
+                
+                // El bot guarda un array directo
+                allProducts = Array.isArray(data) ? data : [];
                 filteredProducts = [...allProducts];
                 renderProducts();
-
+        
             } catch (error) {
-                console.error('Error cargando productos:', error);
+                console.error('Error:', error);
                 showEmptyState();
             }
         }
