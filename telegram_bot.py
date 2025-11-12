@@ -42,99 +42,87 @@ def repo_url_with_token():
 def ensure_repo():
     try:
         if not LOCAL_REPO_PATH.exists():
-            print("Clonando repo...")
+            print("🌀 Clonando repo...")
             LOCAL_REPO_PATH.mkdir(parents=True, exist_ok=True)
             result = subprocess.run(["git", "clone", repo_url_with_token(), str(LOCAL_REPO_PATH)], capture_output=True, text=True)
             if result.returncode != 0:
-                print(f"Error clonando: {result.stderr}")
+                print(f"❌ Error clonando: {result.stderr}")
                 return False
-            print("Repo clonado")
+            print("✅ Repo clonado correctamente.")
         else:
-            print("Actualizando repo...")
+            print("🔄 Actualizando repo...")
             result = subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "pull"], capture_output=True, text=True)
             if result.returncode != 0:
-                print(f"Error en pull: {result.stderr}")
+                print(f"⚠️ Error en pull: {result.stderr}")
             else:
-                print("Repo actualizado")
+                print("📦 Repo actualizado correctamente.")
         return True
     except Exception as e:
-        print(f"Error con git: {e}")
+        print(f"💥 Error con git: {e}")
         return False
 
 def load_productos_from_disk():
     ruta = LOCAL_REPO_PATH / JSON_FILENAME
     if not ruta.exists():
-        print("productos.json no existe")
+        print("⚠️ productos.json no existe.")
         return []
     try:
         with ruta.open("r", encoding="utf-8") as f:
             productos = json.load(f)
-            print(f"Cargados {len(productos)} productos")
+            print(f"✅ Cargados {len(productos)} productos del archivo.")
             return productos if isinstance(productos, list) else []
     except Exception as e:
-        print(f"Error leyendo productos.json: {e}")
+        print(f"❌ Error leyendo productos.json: {e}")
     return []
 
 def save_and_push_productos():
     try:
-        print("\nGuardando productos...")
+        print("\n💾 Guardando productos...")
         ok = ensure_repo()
         if not ok:
-            print("No se pudo acceder al repo")
+            print("⚠️ No se pudo acceder al repo.")
             return False
         
         ruta = LOCAL_REPO_PATH / JSON_FILENAME
         lista = list(productos_db.values())
-        print(f"Escribiendo {len(lista)} productos")
+        print(f"✍️ Escribiendo {len(lista)} productos...")
         
         with ruta.open("w", encoding="utf-8") as f:
             json.dump(lista, f, ensure_ascii=False, indent=2)
-        print("Archivo escrito")
+        print("✅ Archivo JSON actualizado.")
         
         subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "config", "user.email", "bot@undershopp.local"], check=True)
         subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "config", "user.name", "UnderShoppBot"], check=True)
         
-        print("Git add...")
         subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "add", JSON_FILENAME], check=True)
         
         res = subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "status", "--porcelain"], capture_output=True, text=True)
         if res.stdout.strip() == "":
-            print("No hay cambios")
+            print("ℹ️ No hay cambios para guardar.")
             return True
         
-        print("Git commit...")
-        mensaje = f"Bot: actualizacion {datetime.now(timezone.utc).isoformat()}"
+        mensaje = f"🕒 Bot: actualización {datetime.now(timezone.utc).isoformat()}"
         subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "commit", "-m", mensaje], check=True)
+        print("✅ Commit creado.")
         
-        print("Git push...")
         result = subprocess.run(
             ["git", "-C", str(LOCAL_REPO_PATH), "push", repo_url_with_token(), REPO_BRANCH],
             capture_output=True,
             text=True
         )
-        
         if result.returncode != 0:
-            print(f"ERROR EN PUSH:")
-            print(f"Return code: {result.returncode}")
-            print(f"Stdout: {result.stdout}")
-            print(f"Stderr: {result.stderr}")
+            print(f"❌ ERROR EN PUSH:")
+            print(f"{result.stderr}")
             return False
         
-        print("Push exitoso\n")
+        print("🚀 Push exitoso.\n")
         return True
         
     except subprocess.CalledProcessError as e:
-        print(f"Error en git comando: {e}")
-        print(f"Comando: {e.cmd}")
-        if hasattr(e, 'stderr') and e.stderr:
-            print(f"Stderr: {e.stderr}")
-        if hasattr(e, 'stdout') and e.stdout:
-            print(f"Stdout: {e.stdout}")
+        print(f"💥 Error en comando git: {e}")
         return False
     except Exception as e:
-        print(f"Error general: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"💥 Error general: {e}")
         return False
 
 def es_admin(user_id):
@@ -145,39 +133,48 @@ def solo_admins(func):
         user = update.effective_user
         uid = user.id if user else None
         if not es_admin(uid):
-            await update.message.reply_text(f"Acceso denegado. Tu ID: {uid}")
+            await update.message.reply_text(f"🚫 Acceso denegado.\nTu ID: `{uid}`", parse_mode="Markdown")
             return
         return await func(update, context)
     return wrapper
 
 @solo_admins
 async def start(update, context):
-    await update.message.reply_text("Under Shopp Bot\n\n/agregar - Agregar producto\n/listar - Ver productos\n/catalogo - Ver URL")
+    await update.message.reply_text(
+        "👋 *Bienvenido al Bot UnderShopp*\n\n"
+        "✨ Administra tus productos fácilmente.\n\n"
+        "📋 *Comandos disponibles:*\n"
+        "• `/agregar` → Agregar un producto nuevo\n"
+        "• `/listar` → Ver todos los productos\n"
+        "• `/catalogo` → Ver el catálogo online\n\n"
+        "🧾 Usa `/cancelar` para detener cualquier acción.",
+        parse_mode="Markdown"
+    )
 
 @solo_admins
 async def catalogo(update, context):
     url = f"https://{GITHUB_USER}.github.io/{GITHUB_REPO.split('/',1)[1] if '/' in GITHUB_REPO else GITHUB_REPO}/"
-    await update.message.reply_text(f"Catalogo: {url}")
+    await update.message.reply_text(f"🌐 *Catálogo público:*\n[{url}]({url})", parse_mode="Markdown")
 
 @solo_admins
 async def listar(update, context):
     if not productos_db:
-        await update.message.reply_text("Sin productos")
+        await update.message.reply_text("⚠️ *No hay productos registrados aún.*", parse_mode="Markdown")
         return
-    texto = "Productos:\n\n"
+    texto = "🛍️ *Catálogo actual:*\n\n"
     for i, p in enumerate(sorted(productos_db.values(), key=lambda x: x.get("fecha",""), reverse=True), 1):
-        texto += f"{i}. {p.get('nombre')} - ${p.get('precio')}\n"
-    await update.message.reply_text(texto)
+        texto += f"*{i}. {p.get('nombre')}*  💵 ${p.get('precio')}\n📦 {p.get('categoria').capitalize()}\n\n"
+    await update.message.reply_text(texto, parse_mode="Markdown")
 
 @solo_admins
 async def agregar_inicio(update, context):
     context.user_data.clear()
-    await update.message.reply_text("Paso 1/6: Nombre del producto")
+    await update.message.reply_text("🧾 *Paso 1/6:* Escribe el *nombre del producto*", parse_mode="Markdown")
     return NOMBRE
 
 async def recibir_nombre(update, context):
     context.user_data['nombre'] = update.message.text.strip()
-    await update.message.reply_text("Paso 2/6: Precio (solo numeros)")
+    await update.message.reply_text("💰 *Paso 2/6:* Ingresa el *precio* (solo números)", parse_mode="Markdown")
     return PRECIO
 
 async def recibir_precio(update, context):
@@ -185,28 +182,32 @@ async def recibir_precio(update, context):
     try:
         precio = float(texto)
     except:
-        await update.message.reply_text("Precio invalido")
+        await update.message.reply_text("❌ Precio inválido. Intenta nuevamente.")
         return PRECIO
     context.user_data['precio'] = f"{precio:.0f}"
-    await update.message.reply_text("Paso 3/6: Descripcion (o /saltar)")
+    await update.message.reply_text("📝 *Paso 3/6:* Escribe una *descripción* o usa /saltar", parse_mode="Markdown")
     return DESCRIPCION
 
 async def recibir_descripcion(update, context):
     context.user_data['descripcion'] = update.message.text.strip()
-    await update.message.reply_text("Paso 4/6: Tallas (o /saltar)")
+    await update.message.reply_text("📏 *Paso 4/6:* Ingresa *tallas disponibles* o usa /saltar", parse_mode="Markdown")
     return TALLAS
 
 async def recibir_tallas(update, context):
     context.user_data['tallas'] = update.message.text.strip()
-    keyboard = [[InlineKeyboardButton("Zapatillas", callback_data="cat_zapatillas")], [InlineKeyboardButton("Ropa", callback_data="cat_ropa")]]
-    await update.message.reply_text("Paso 5/6: Categoria:", reply_markup=InlineKeyboardMarkup(keyboard))
+    keyboard = [
+        [InlineKeyboardButton("👟 Zapatillas", callback_data="cat_zapatillas"),
+         InlineKeyboardButton("🧥 Ropa", callback_data="cat_ropa")]
+    ]
+    await update.message.reply_text("🗂️ *Paso 5/6:* Selecciona una *categoría:*", 
+                                    reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
     return CATEGORIA
 
 async def recibir_categoria(update, context):
     query = update.callback_query
     await query.answer()
     context.user_data['categoria'] = query.data.replace("cat_", "")
-    await query.edit_message_text("Paso 6/6: Envia foto (o /saltar)")
+    await query.edit_message_text("📸 *Paso 6/6:* Envía una *foto del producto* o usa /saltar", parse_mode="Markdown")
     return IMAGEN
 
 async def recibir_imagen(update, context):
@@ -222,19 +223,20 @@ async def recibir_imagen(update, context):
 async def saltar(update, context):
     if 'descripcion' not in context.user_data:
         context.user_data['descripcion'] = ""
-        await update.message.reply_text("Tallas (o /saltar)")
+        await update.message.reply_text("📏 Tallas disponibles (o /saltar):")
         return TALLAS
     if 'tallas' not in context.user_data:
         context.user_data['tallas'] = ""
-        keyboard = [[InlineKeyboardButton("Zapatillas", callback_data="cat_zapatillas")], [InlineKeyboardButton("Ropa", callback_data="cat_ropa")]]
-        await update.message.reply_text("Categoria:", reply_markup=InlineKeyboardMarkup(keyboard))
+        keyboard = [[InlineKeyboardButton("👟 Zapatillas", callback_data="cat_zapatillas"),
+                     InlineKeyboardButton("🧥 Ropa", callback_data="cat_ropa")]]
+        await update.message.reply_text("🗂️ Selecciona una categoría:", reply_markup=InlineKeyboardMarkup(keyboard))
         return CATEGORIA
     context.user_data['imagen'] = ""
     return await finalizar_producto(update, context)
 
 async def cancelar(update, context):
     context.user_data.clear()
-    await update.message.reply_text("Cancelado")
+    await update.message.reply_text("❌ *Operación cancelada.*", parse_mode="Markdown")
     return ConversationHandler.END
 
 async def finalizar_producto(update, context):
@@ -253,13 +255,19 @@ async def finalizar_producto(update, context):
         productos_db[producto["id"]] = producto
         saved = save_and_push_productos()
         if saved:
-            await update.message.reply_text(f"Producto agregado\n\n{producto['nombre']}\n${producto['precio']}")
+            await update.message.reply_text(
+                f"✅ *Producto agregado correctamente*\n\n"
+                f"📦 {producto['nombre']}\n"
+                f"💵 ${producto['precio']}\n"
+                f"👕 {producto['categoria'].capitalize()}",
+                parse_mode="Markdown"
+            )
         else:
-            await update.message.reply_text("Error al guardar en GitHub")
+            await update.message.reply_text("⚠️ *Error al guardar en GitHub*", parse_mode="Markdown")
         context.user_data.clear()
         return ConversationHandler.END
     except Exception as e:
-        await update.message.reply_text(f"Error: {e}")
+        await update.message.reply_text(f"💥 Error: {e}")
         context.user_data.clear()
         return ConversationHandler.END
 
@@ -276,7 +284,7 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
 def start_health_server():
     port = int(os.getenv('PORT', 10000))
     server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
-    print(f"Servidor HTTP en puerto {port}")
+    print(f"🩺 Servidor HTTP de salud en puerto {port}")
     server.serve_forever()
 
 def main():
@@ -287,7 +295,7 @@ def main():
     if not GITHUB_TOKEN: missing.append("GITHUB_TOKEN")
     if not ADMIN_IDS: missing.append("ADMIN_IDS")
     if missing:
-        print(f"Faltan: {', '.join(missing)}")
+        print(f"⚠️ Faltan variables de entorno: {', '.join(missing)}")
         return
     
     threading.Thread(target=start_health_server, daemon=True).start()
@@ -317,7 +325,7 @@ def main():
     )
     
     app.add_handler(conv)
-    print("Bot iniciado\n")
+    print("🤖 Bot iniciado correctamente.\n")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
