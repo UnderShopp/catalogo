@@ -2,6 +2,7 @@ import os
 import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
+from telegram import ReplyKeyboardMarkup
 
 # Configuración de logging
 logging.basicConfig(
@@ -11,10 +12,41 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Estados del conversation handler
-NOMBRE, PRECIO, DESCRIPCION, TALLAS, IMAGEN = range(5)
+CATEGORIA, NOMBRE, PRECIO, DESCRIPCION, TALLAS, IMAGEN = range(6)
 
 # Variable para almacenar productos temporalmente
 productos_temp = {}
+async def agregar_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Inicia el proceso de agregar producto"""
+    keyboard = [['👟 Zapatillas', '👕 Ropa']]
+    await update.message.reply_text(
+        "✨ *Agregar Nuevo Producto*\n\n"
+        "Primero selecciona la *categoría* del producto:",
+        reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True),
+        parse_mode='Markdown'
+    )
+    return CATEGORIA
+
+async def recibir_categoria(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Recibe la categoría del producto"""
+    user_id = update.effective_user.id
+    categoria = update.message.text.lower().strip()
+
+    if categoria not in ["👟 zapatillas", "👕 ropa", "zapatillas", "ropa"]:
+        await update.message.reply_text("❌ Opción inválida. Selecciona una categoría válida.")
+        return CATEGORIA
+
+    categoria = "zapatillas" if "zapatillas" in categoria else "ropa"
+    if user_id not in productos_temp:
+        productos_temp[user_id] = {}
+    productos_temp[user_id]["categoria"] = categoria
+
+    await update.message.reply_text(
+        f"✅ Categoría guardada: *{categoria.capitalize()}*\n\n"
+        "Paso 1/5: ¿Cuál es el *nombre* del producto?",
+        parse_mode='Markdown'
+    )
+    return NOMBRE
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando de inicio"""
@@ -307,18 +339,19 @@ def main():
     
     # Conversation handler para agregar productos
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('agregar', agregar_start)],
-        states={
-            NOMBRE: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_nombre)],
-            PRECIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_precio)],
-            DESCRIPCION: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_descripcion)],
-            TALLAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_tallas)],
-            IMAGEN: [
-                MessageHandler(filters.PHOTO, recibir_imagen),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_imagen)
+    entry_points=[CommandHandler('agregar', agregar_start)],
+    states={
+        CATEGORIA: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_categoria)],
+        NOMBRE: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_nombre)],
+        PRECIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_precio)],
+        DESCRIPCION: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_descripcion)],
+        TALLAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_tallas)],
+        IMAGEN: [
+            MessageHandler(filters.PHOTO, recibir_imagen),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_imagen)
             ],
         },
-        fallbacks=[CommandHandler('cancelar', cancelar)],
+    fallbacks=[CommandHandler('cancelar', cancelar)],
     )
     
     # Registrar handlers
