@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Under Shopp Bot - Con servidor HTTP para Render.com Web Service (GRATIS)
+Adaptado para python-telegram-bot v20+ (async)
 """
 import os
 import json
@@ -18,7 +19,7 @@ from telegram.ext import (
     ContextTypes,
     ConversationHandler
 )
-from flask import Flask
+from flask import Flask, jsonify
 
 # ==================== CONFIGURACIÓN ====================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -49,32 +50,38 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return """
+    bot_link = ""
+    # No podemos extraer el username del bot solo con BOT_TOKEN de forma segura aquí,
+    # así que mostramos el token-part como fallback (opcional) o dejamos vacío si no hay token.
+    if BOT_TOKEN:
+        bot_link = f"https://t.me/{BOT_TOKEN.split(':')[0]}"
+    return f"""
     <html>
     <head>
         <title>Under Shopp Bot</title>
         <style>
-            body {
+            body {{
                 font-family: Arial, sans-serif;
                 max-width: 600px;
                 margin: 50px auto;
                 padding: 20px;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: white;
-            }
-            .container {
+            }}
+            .container {{
                 background: rgba(255,255,255,0.1);
                 padding: 30px;
                 border-radius: 15px;
                 backdrop-filter: blur(10px);
-            }
-            h1 { margin: 0 0 20px 0; }
-            .status { 
+            }}
+            h1 {{ margin: 0 0 20px 0; }}
+            .status {{ 
                 background: rgba(0,255,0,0.2);
                 padding: 10px;
                 border-radius: 8px;
                 margin: 15px 0;
-            }
+            }}
+            a {{ color: #ffd700; }}
         </style>
     </head>
     <body>
@@ -82,10 +89,10 @@ def home():
             <h1>🤖 Under Shopp Bot</h1>
             <div class="status">
                 <strong>✅ Bot Activo</strong><br>
-                📦 Productos: """ + str(len(productos_db)) + """
+                📦 Productos: {len(productos_db)}
             </div>
             <p>Este bot está corriendo correctamente en Render.com</p>
-            <p>🔗 <a href="https://t.me/""" + (BOT_TOKEN.split(':')[0] if BOT_TOKEN else '') + """" style="color: #ffd700;">Abrir en Telegram</a></p>
+            <p>🔗 <a href="{bot_link}" target="_blank">Abrir en Telegram</a></p>
         </div>
     </body>
     </html>
@@ -93,7 +100,7 @@ def home():
 
 @app.route('/health')
 def health():
-    return {'status': 'ok', 'productos': len(productos_db)}, 200
+    return jsonify({'status': 'ok', 'productos': len(productos_db)}), 200
 
 # ==================== FUNCIONES GIT ====================
 
@@ -219,16 +226,18 @@ def solo_admins(func):
         uid = user.id if user else None
         
         if not es_admin(uid):
-            await update.message.reply_text(
-                f"🚫 *Acceso Denegado*\n\n"
-                f"Este bot es solo para administradores de Under Shopp.\n"
-                f"Tu ID: `{uid}`\n\n"
-                f"Contacta al propietario si necesitas acceso.",
-                parse_mode="Markdown"
-            )
-            print(f"⚠️ Intento de acceso no autorizado - ID: {uid} - Nombre: {user.first_name}")
+            # Manejar casos donde update.message puede ser None (ej. callback_query)
+            target = update.message if update.message else (update.callback_query or None)
+            if target:
+                await target.reply_text(
+                    f"🚫 *Acceso Denegado*\n\n"
+                    f"Este bot es solo para administradores de Under Shopp.\n"
+                    f"Tu ID: `{uid}`\n\n"
+                    f"Contacta al propietario si necesitas acceso.",
+                    parse_mode="Markdown"
+                )
+            print(f"⚠️ Intento de acceso no autorizado - ID: {uid} - Nombre: {getattr(user, 'first_name', None)}")
             return
-        
         return await func(update, context)
     return wrapper
 
@@ -277,6 +286,9 @@ async def ayuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @solo_admins
 async def catalogo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando /catalogo - muestra la URL pública"""
+    if not GITHUB_USER or not GITHUB_REPO:
+        await update.message.reply_text("⚠️ Configuración de GitHub incompleta.")
+        return
     repo_name = GITHUB_REPO.split('/')[-1] if '/' in GITHUB_REPO else GITHUB_REPO
     url = f"https://{GITHUB_USER}.github.io/{repo_name}/"
     
@@ -420,6 +432,7 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['imagenes'] = []
     
     if update.message.photo:
+        # Tomar el mejor tamaño (última)
         file = await update.message.photo[-1].get_file()
         img_url = file.file_path
         context.user_data['imagenes'].append(img_url)
@@ -442,6 +455,8 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return IMAGEN
     
+    # Si llega otro contenido, pedir nuevamente
+    await update.message.reply_text("Por favor envía una foto o una URL (http...).")
     return IMAGEN
 
 async def continuar_a_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -615,14 +630,14 @@ async def texto_rapido_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 # ==================== BOT EN THREAD ====================
 
 def run_bot():
-    """Ejecuta el bot en un thread separado"""
+    """Ejecuta el bot en un thread separado (async, compatible con PTB v20+)"""
     print("="*50)
     print("🤖 UNDER SHOPP BOT")
     print("="*50)
-    print(f"✅ Bot Token: Configurado")
+    print(f"✅ Bot Token: {'Configurado' if BOT_TOKEN else 'NO'}")
     print(f"✅ GitHub: {GITHUB_USER}/{GITHUB_REPO}")
     print(f"👥 Admins autorizados: {len(ADMIN_IDS)}")
-    print(f"🔑 IDs: {', '.join(map(str, ADMIN_IDS))}")
+    print(f"🔑 IDs: {', '.join(map(str, ADMIN_IDS)) if ADMIN_IDS else 'ninguno'}")
     print("="*50)
 
     print("\n📦 Preparando repositorio...")
@@ -633,8 +648,10 @@ def run_bot():
     print(f"📊 Productos cargados: {len(productos_db)}")
 
     print("\n🚀 Iniciando bot...")
+    # Construir aplicación (no usar Updater en v20+)
     bot_app = ApplicationBuilder().token(BOT_TOKEN).build()
 
+    # Handlers
     bot_app.add_handler(CommandHandler("start", start))
     bot_app.add_handler(CommandHandler("ayuda", ayuda))
     bot_app.add_handler(CommandHandler("listar", listar))
@@ -666,7 +683,9 @@ def run_bot():
                 CommandHandler("saltar", saltar)
             ]
         },
-        fallbacks=[CommandHandler("cancelar", cancelar)]
+        fallbacks=[CommandHandler("cancelar", cancelar)],
+        per_user=True,
+        per_chat=True
     )
     
     bot_app.add_handler(conv)
@@ -675,12 +694,11 @@ def run_bot():
     print("✅ Bot iniciado correctamente")
     print("⏳ Esperando mensajes...\n")
     
+    # run_polling es blocking — lo ejecutamos en este thread (que es un daemon cuando lo inicias desde main)
     bot_app.run_polling(drop_pending_updates=True)
 
-# ==================== MAIN ====================
 
 def main():
-    """Función principal"""
     missing = []
     if not BOT_TOKEN: missing.append("BOT_TOKEN")
     if not GITHUB_USER: missing.append("GITHUB_USER")
@@ -692,11 +710,9 @@ def main():
         print(f"❌ Faltan variables de entorno: {', '.join(missing)}")
         return
 
-    # Iniciar bot en thread separado
     bot_thread = Thread(target=run_bot, daemon=True)
     bot_thread.start()
     
-    # Iniciar servidor Flask en el thread principal
     port = int(os.environ.get('PORT', 10000))
     print(f"\n🌐 Servidor HTTP iniciando en puerto {port}...")
     app.run(host='0.0.0.0', port=port)
