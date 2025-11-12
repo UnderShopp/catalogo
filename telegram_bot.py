@@ -365,5 +365,28 @@ def main():
     logger.info("🤖 Bot iniciado correctamente")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    # Para Render Web Service: abrir un puerto
+    import threading
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    
+    class HealthCheck(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b'Bot running OK')
+        def log_message(self, format, *args):
+            pass  # Silenciar logs HTTP
+    
+    # Servidor HTTP en puerto que Render espera
+    port = int(os.getenv('PORT', 10000))
+    server = HTTPServer(('0.0.0.0', port), HealthCheck)
+    
+    # Correr servidor en thread separado
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    print(f"✅ Servidor HTTP en puerto {port}")
+    
+    # Correr el bot normalmente
     main()
