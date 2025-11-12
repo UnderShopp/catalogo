@@ -2,11 +2,13 @@ import os
 import json
 import logging
 from datetime import datetime
+from threading import Thread
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
 from git import Repo
 import tempfile
 import shutil
+from flask import Flask
 
 # Configuración de logging
 logging.basicConfig(
@@ -15,26 +17,48 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Estados del conversation handler
+# ======================================
+# SERVIDOR WEB PARA RENDER
+# ======================================
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return '''
+    <html>
+        <head><title>Bot Catálogo Premium</title></head>
+        <body style="font-family: Arial; text-align: center; padding: 50px; background: #0e0e1a; color: white;">
+            <h1>🤖 Bot de Catálogo Premium</h1>
+            <p style="font-size: 20px;">✅ Bot activo y funcionando</p>
+            <p>Telegram Bot está corriendo en segundo plano</p>
+        </body>
+    </html>
+    '''
+
+@app.route('/health')
+def health():
+    return {'status': 'ok', 'bot': 'running'}, 200
+
+def run_flask():
+    """Ejecuta el servidor Flask en un thread separado"""
+    port = int(os.getenv('PORT', 8080))
+    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+
+# ======================================
+# CONFIGURACIÓN DEL BOT
+# ======================================
 NOMBRE, PRECIO, DESCRIPCION, TALLAS, IMAGEN = range(5)
-
-# Archivo JSON para productos
 PRODUCTOS_FILE = 'productos.json'
-
-# Variable para almacenar productos temporalmente
 productos_temp = {}
 
-# Configuración de administradores
 ADMIN_IDS = os.getenv('ADMIN_IDS', '')
 ADMIN_LIST = [int(id.strip()) for id in ADMIN_IDS.split(',') if id.strip().isdigit()]
 
-# Configuración de Git (usando las variables que ya tienes)
 GITHUB_USER = os.getenv('GITHUB_USER')
 GITHUB_REPO = os.getenv('GITHUB_REPO')
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 GIT_BRANCH = os.getenv('GIT_BRANCH', 'main')
 
-# Construir URL del repositorio
 GIT_REPO_URL = f"https://github.com/{GITHUB_USER}/{GITHUB_REPO}.git" if GITHUB_USER and GITHUB_REPO else None
 
 def get_repo_url_with_auth():
@@ -51,33 +75,25 @@ def push_to_github(productos):
             logger.warning("⚠️ Git no configurado. Productos solo guardados localmente.")
             return False
         
-        # Crear directorio temporal
         temp_dir = tempfile.mkdtemp()
         
         try:
             logger.info("📥 Clonando repositorio...")
             repo = Repo.clone_from(repo_url, temp_dir, branch=GIT_BRANCH, depth=1)
             
-            # Configurar usuario Git
             with repo.config_writer() as git_config:
                 git_config.set_value('user', 'name', GITHUB_USER or 'Bot Telegram')
                 git_config.set_value('user', 'email', f'{GITHUB_USER}@users.noreply.github.com' if GITHUB_USER else 'bot@telegram.com')
             
-            # Actualizar productos.json en el repo
             productos_path = os.path.join(temp_dir, PRODUCTOS_FILE)
             with open(productos_path, 'w', encoding='utf-8') as f:
                 json.dump(productos, f, ensure_ascii=False, indent=2)
             
-            # Verificar si hay cambios
             if repo.is_dirty(untracked_files=True):
-                # Agregar archivo
                 repo.index.add([PRODUCTOS_FILE])
-                
-                # Commit
                 commit_message = f"🤖 Actualización catálogo - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
                 repo.index.commit(commit_message)
                 
-                # Push
                 origin = repo.remote('origin')
                 origin.push()
                 
@@ -92,7 +108,6 @@ def push_to_github(productos):
             return False
             
         finally:
-            # Limpiar directorio temporal
             try:
                 shutil.rmtree(temp_dir, ignore_errors=True)
             except:
@@ -123,24 +138,22 @@ def cargar_productos():
 def guardar_productos(productos):
     """Guarda productos localmente y en GitHub"""
     try:
-        # Guardar localmente primero
         with open(PRODUCTOS_FILE, 'w', encoding='utf-8') as f:
             json.dump(productos, f, ensure_ascii=False, indent=2)
         
         logger.info(f"✅ Guardados {len(productos)} productos localmente")
-        
-        # Intentar subir a GitHub
         git_success = push_to_github(productos)
-        
         return True
     except Exception as e:
         logger.error(f"❌ Error guardando productos: {e}")
         return False
 
+# ======================================
+# COMANDOS DEL BOT
+# ======================================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando de inicio"""
     user = update.effective_user
-    
     git_status = "✅ Conectado" if GITHUB_USER and GITHUB_REPO and GITHUB_TOKEN else "⚠️ No configurado"
     
     await update.message.reply_text(
@@ -355,26 +368,18 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return IMAGEN
     
-    # Crear producto
     producto = productos_temp[user_id].copy()
     producto['imagen'] = imagen_url
     producto['fecha'] = datetime.now().isoformat()
     
-    # Cargar productos existentes
     productos = cargar_productos()
-    
-    # Generar ID único
     producto_id = len(productos) + 1
     producto['id'] = str(producto_id)
-    
-    # Agregar nuevo producto
     productos.append(producto)
     
-    # Guardar (local y GitHub)
     await update.message.reply_text("⏳ Guardando producto y sincronizando con GitHub...")
     
     if guardar_productos(productos):
-        # Crear mensaje de confirmación
         mensaje = (
             "✅ *¡Producto agregado exitosamente!*\n\n"
             f"📦 *{producto['nombre']}*\n"
@@ -406,8 +411,6 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         mensaje += "Usa /agregar para añadir otro producto."
         
         await update.message.reply_text(mensaje, parse_mode='Markdown')
-        
-        # Limpiar datos temporales
         del productos_temp[user_id]
     else:
         await update.message.reply_text(
@@ -442,7 +445,6 @@ async def listar_productos(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    # Enviar en bloques de 10
     bloques = [productos[i:i+10] for i in range(0, len(productos), 10)]
     
     for idx_bloque, bloque in enumerate(bloques):
@@ -533,6 +535,9 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Por favor intenta nuevamente."
         )
 
+# ======================================
+# FUNCIÓN PRINCIPAL
+# ======================================
 def main():
     """Función principal"""
     TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -542,7 +547,6 @@ def main():
         logger.info("💡 Configura el token en las variables de entorno de Render")
         return
     
-    # Verificar configuración de Git
     if not GITHUB_USER or not GITHUB_REPO or not GITHUB_TOKEN:
         logger.warning("⚠️ Git no configurado completamente")
         logger.info("💡 Para sincronizar con GitHub, configura:")
@@ -557,15 +561,20 @@ def main():
         logger.info(f"✅ Git configurado: {GITHUB_USER}/{GITHUB_REPO}")
         logger.info(f"🌿 Rama: {GIT_BRANCH}")
     
-    # Inicializar archivo de productos si no existe
     if not os.path.exists(PRODUCTOS_FILE):
         guardar_productos([])
         logger.info(f"✅ Archivo {PRODUCTOS_FILE} creado")
     
-    # Crear aplicación
+    # INICIAR SERVIDOR WEB EN THREAD SEPARADO
+    logger.info("🌐 Iniciando servidor web para Render...")
+    flask_thread = Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    logger.info(f"✅ Servidor web iniciado en puerto {os.getenv('PORT', 8080)}")
+    
+    # Crear aplicación del bot
     application = Application.builder().token(TOKEN).build()
     
-    # Conversation handler para agregar productos
+    # Conversation handler
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('agregar', agregar_start)],
         states={
