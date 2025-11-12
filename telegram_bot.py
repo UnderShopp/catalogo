@@ -33,8 +33,8 @@ LOCAL_REPO_PATH = Path("/tmp/catalogo")
 JSON_FILENAME = "productos.json"
 REPO_BRANCH = "main"
 
-# Estados
-NOMBRE, PRECIO, DESCRIPCION, TALLAS, CATEGORIA, IMAGEN = range(6)
+# Estados (agregamos VIDEO)
+NOMBRE, PRECIO, DESCRIPCION, TALLAS, CATEGORIA, IMAGEN, VIDEO = range(7)
 
 productos_db = {}
 
@@ -149,7 +149,10 @@ async def ayuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /catalogo → Ver URL\n\n"
         "*Categorías disponibles:*\n"
         "• 👟 Zapatillas\n"
-        "• 👕 Ropa",
+        "• 👕 Ropa\n\n"
+        "*Multimedia:*\n"
+        "• Puedes enviar múltiples fotos\n"
+        "• Puedes agregar un video adicional",
         parse_mode="Markdown"
     )
 
@@ -167,23 +170,26 @@ async def listar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto = "📋 *Productos:*\n\n"
     for i, p in enumerate(sorted(productos_db.values(), key=lambda x: x.get("fecha",""), reverse=True), 1):
         cat_icon = "👟" if p.get("categoria") == "zapatillas" else "👕"
-        texto += f"{i}. {cat_icon} *{p.get('nombre')}*\n   💰 ${p.get('precio')}\n\n"
+        video_icon = " 🎥" if p.get("video") else ""
+        img_count = len(p.get("imagen", [])) if isinstance(p.get("imagen"), list) else (1 if p.get("imagen") else 0)
+        texto += f"{i}. {cat_icon} *{p.get('nombre')}*{video_icon}\n   💰 ${p.get('precio')} | 📷 {img_count}\n\n"
     
     await update.message.reply_text(texto, parse_mode="Markdown")
 
 @solo_admins
 async def agregar_inicio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
+    context.user_data['imagenes'] = []  # Para múltiples fotos
     await update.message.reply_text(
         "✨ *Agregar Producto*\n\n"
-        "Paso 1/6: Nombre del producto",
+        "Paso 1/7: Nombre del producto",
         parse_mode="Markdown"
     )
     return NOMBRE
 
 async def recibir_nombre(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['nombre'] = update.message.text.strip()
-    await update.message.reply_text("💰 Paso 2/6: Precio (solo números)")
+    await update.message.reply_text("💰 Paso 2/7: Precio (solo números)")
     return PRECIO
 
 async def recibir_precio(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -195,18 +201,17 @@ async def recibir_precio(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return PRECIO
     
     context.user_data['precio'] = f"{precio:.0f}"
-    await update.message.reply_text("📝 Paso 3/6: Descripción (o /saltar)")
+    await update.message.reply_text("📝 Paso 3/7: Descripción (o /saltar)")
     return DESCRIPCION
 
 async def recibir_descripcion(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['descripcion'] = update.message.text.strip()
-    await update.message.reply_text("📏 Paso 4/6: Tallas (ej: 36-42) (o /saltar)")
+    await update.message.reply_text("📏 Paso 4/7: Tallas (ej: 36-42) (o /saltar)")
     return TALLAS
 
 async def recibir_tallas(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['tallas'] = update.message.text.strip()
     
-    # Botones para seleccionar categoría
     keyboard = [
         [InlineKeyboardButton("👟 Zapatillas", callback_data="cat_zapatillas")],
         [InlineKeyboardButton("👕 Ropa", callback_data="cat_ropa")]
@@ -214,7 +219,7 @@ async def recibir_tallas(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        "🏷️ Paso 5/6: Selecciona la categoría:",
+        "🏷️ Paso 5/7: Selecciona la categoría:",
         reply_markup=reply_markup
     )
     return CATEGORIA
@@ -229,27 +234,75 @@ async def recibir_categoria(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cat_emoji = "👟" if categoria == "zapatillas" else "👕"
     await query.edit_message_text(
         f"✅ Categoría: {cat_emoji} {categoria.capitalize()}\n\n"
-        f"📸 Paso 6/6: Envía una foto del producto (o /saltar)"
+        f"📸 Paso 6/7: Envía UNA O VARIAS fotos del producto\n"
+        f"(Puedes enviar una por una o en grupo)\n"
+        f"Cuando termines escribe /continuar o /saltar"
     )
     return IMAGEN
 
 async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    img_url = ""
+    if 'imagenes' not in context.user_data:
+        context.user_data['imagenes'] = []
+    
     if update.message.photo:
+        # Recibir foto de Telegram
         file = await update.message.photo[-1].get_file()
         img_url = file.file_path
-    else:
-        img_url = update.message.text.strip()
+        context.user_data['imagenes'].append(img_url)
+        
+        count = len(context.user_data['imagenes'])
+        await update.message.reply_text(
+            f"✅ Foto {count} guardada\n"
+            f"Envía más fotos o escribe /continuar"
+        )
+        return IMAGEN
     
-    context.user_data['imagen'] = img_url
+    elif update.message.text and update.message.text.startswith('http'):
+        # Recibir URL de imagen
+        img_url = update.message.text.strip()
+        context.user_data['imagenes'].append(img_url)
+        
+        count = len(context.user_data['imagenes'])
+        await update.message.reply_text(
+            f"✅ Foto {count} guardada\n"
+            f"Envía más fotos o escribe /continuar"
+        )
+        return IMAGEN
+    
+    return IMAGEN
+
+async def continuar_a_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    count = len(context.user_data.get('imagenes', []))
+    await update.message.reply_text(
+        f"📷 {count} foto(s) guardada(s)\n\n"
+        f"🎥 Paso 7/7: Envía un VIDEO (opcional)\n"
+        f"Puedes enviar el video directo o una URL\n"
+        f"O escribe /saltar si no tienes video"
+    )
+    return VIDEO
+
+async def recibir_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    video_url = ""
+    
+    if update.message.video:
+        # Video directo de Telegram
+        file = await update.message.video.get_file()
+        video_url = file.file_path
+    elif update.message.text and update.message.text.startswith('http'):
+        # URL de video
+        video_url = update.message.text.strip()
+    
+    context.user_data['video'] = video_url
     return await finalizar_producto(update, context)
 
 async def saltar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Saltar descripción
     if 'descripcion' not in context.user_data:
         context.user_data['descripcion'] = ""
-        await update.message.reply_text("📏 Paso 4/6: Tallas (o /saltar)")
+        await update.message.reply_text("📏 Paso 4/7: Tallas (o /saltar)")
         return TALLAS
     
+    # Saltar tallas
     if 'tallas' not in context.user_data:
         context.user_data['tallas'] = ""
         keyboard = [
@@ -260,7 +313,15 @@ async def saltar(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🏷️ Categoría:", reply_markup=reply_markup)
         return CATEGORIA
     
-    context.user_data['imagen'] = ""
+    # Saltar imágenes
+    if 'categoria' in context.user_data and len(context.user_data.get('imagenes', [])) == 0:
+        await update.message.reply_text(
+            "🎥 Paso 7/7: Envía un VIDEO (opcional) o /saltar"
+        )
+        return VIDEO
+    
+    # Saltar video
+    context.user_data['video'] = ""
     return await finalizar_producto(update, context)
 
 async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -273,6 +334,15 @@ async def finalizar_producto(update: Update, context: ContextTypes.DEFAULT_TYPE)
         temp = context.user_data
         user = update.effective_user
         
+        # Procesar imágenes (puede ser array o string único)
+        imagenes = temp.get('imagenes', [])
+        if len(imagenes) == 0:
+            imagen_field = ""
+        elif len(imagenes) == 1:
+            imagen_field = imagenes[0]
+        else:
+            imagen_field = imagenes  # Array de URLs
+        
         producto = {
             "id": f"producto_{int(datetime.utcnow().timestamp())}",
             "nombre": temp.get("nombre", ""),
@@ -280,7 +350,8 @@ async def finalizar_producto(update: Update, context: ContextTypes.DEFAULT_TYPE)
             "descripcion": temp.get("descripcion", ""),
             "tallas": temp.get("tallas", ""),
             "categoria": temp.get("categoria", "zapatillas"),
-            "imagen": temp.get("imagen", ""),
+            "imagen": imagen_field,
+            "video": temp.get("video", ""),
             "fecha": datetime.utcnow().isoformat(),
             "agregado_por": user.first_name or "Admin"
         }
@@ -290,12 +361,15 @@ async def finalizar_producto(update: Update, context: ContextTypes.DEFAULT_TYPE)
         saved = save_and_push_productos()
         
         cat_emoji = "👟" if producto['categoria'] == "zapatillas" else "👕"
+        img_count = len(imagenes)
+        video_emoji = "🎥" if producto['video'] else ""
         
         if saved:
             await update.message.reply_text(
                 f"✅ *Producto agregado*\n\n"
                 f"{cat_emoji} *{producto['nombre']}*\n"
                 f"💰 ${producto['precio']}\n"
+                f"📷 {img_count} foto(s) {video_emoji}\n"
                 f"👤 Por: {user.first_name}\n\n"
                 f"🌐 Ya está en el catálogo web",
                 parse_mode="Markdown"
@@ -335,6 +409,7 @@ async def texto_rapido_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             "tallas": "",
             "categoria": "zapatillas",
             "imagen": imagen,
+            "video": "",
             "fecha": datetime.utcnow().isoformat(),
             "agregado_por": user.first_name or "Admin"
         }
@@ -384,12 +459,24 @@ def main():
         states={
             NOMBRE: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_nombre)],
             PRECIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_precio)],
-            DESCRIPCION: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_descripcion), CommandHandler("saltar", saltar)],
-            TALLAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_tallas), CommandHandler("saltar", saltar)],
+            DESCRIPCION: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_descripcion),
+                CommandHandler("saltar", saltar)
+            ],
+            TALLAS: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_tallas),
+                CommandHandler("saltar", saltar)
+            ],
             CATEGORIA: [CallbackQueryHandler(recibir_categoria, pattern="^cat_")],
             IMAGEN: [
                 MessageHandler(filters.PHOTO, recibir_imagen),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_imagen),
+                CommandHandler("continuar", continuar_a_video),
+                CommandHandler("saltar", saltar)
+            ],
+            VIDEO: [
+                MessageHandler(filters.VIDEO, recibir_video),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_video),
                 CommandHandler("saltar", saltar)
             ]
         },
@@ -403,8 +490,4 @@ def main():
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
-    main()
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
-
-if __name__ == '__main__':
     main()
