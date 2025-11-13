@@ -484,6 +484,66 @@
             margin-top: 1rem;
         }
 
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .image-modal.active {
+            display: flex;
+        }
+
+        .image-modal img {
+            max-width: 90%;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            animation: zoomIn 0.3s ease;
+        }
+
+        .image-modal-close {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: var(--gold);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .image-modal-close:hover {
+            transform: rotate(90deg) scale(1.1);
+            background: #fff;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
         @media (max-width: 768px) {
             .header-content {
                 padding: 1.5rem;
@@ -582,6 +642,11 @@
         <span style="font-size: 2.5rem;">💬</span>
     </a>
 
+    <div id="imageModal" class="image-modal" onclick="closeImageModal()">
+        <div class="image-modal-close">✕</div>
+        <img id="modalImage" src="" alt="Producto ampliado">
+    </div>
+
     <footer class="footer">
         <div class="footer-content">
             <p>Catálogo administrado vía Telegram Bot</p>
@@ -654,9 +719,9 @@
             }
             
             console.log('🎨 Renderizando productos...');
-            grid.innerHTML = filteredProducts.map(producto => `
+            grid.innerHTML = filteredProducts.map((producto, index) => `
                 <div class="product-card">
-                    <div class="product-image">
+                    <div class="product-image" onclick="openImageModal('${producto.imagen || ''}', '${escapeHtml(producto.nombre)}')">
                         ${producto.imagen 
                             ? `<img src="${producto.imagen}" alt="${escapeHtml(producto.nombre)}" onerror="this.parentElement.innerHTML='<div class=\\'placeholder-icon\\'>👟</div>'">`
                             : '<div class="placeholder-icon">👟</div>'
@@ -672,7 +737,7 @@
                         <div class="product-details">
                             <div class="price-section">
                                 <div class="price-label">Precio</div>
-                                <div class="product-price">$${formatPrice(producto.precio)}</div>
+                                <div class="product-price">${formatPrice(producto.precio)}</div>
                                 ${producto.tallas 
                                     ? `<div class="product-sizes">
                                         <span>📏</span>
@@ -681,7 +746,7 @@
                                     : ''
                                 }
                             </div>
-                            <button class="whatsapp-btn" onclick="consultarProducto(event, '${escapeHtml(producto.nombre)}', '${producto.precio}', '${escapeHtml(producto.tallas || '')}')">
+                            <button class="whatsapp-btn" onclick="consultarProducto(event, '${escapeHtml(producto.nombre).replace(/'/g, "\\'")}', '${producto.precio}', '${escapeHtml(producto.tallas || '').replace(/'/g, "\\'")}')">
                                 <span>💬</span>
                                 <span>Consultar por WhatsApp</span>
                             </button>
@@ -791,6 +856,28 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        function openImageModal(imageSrc, productName) {
+            if (!imageSrc) return;
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            modalImage.src = imageSrc;
+            modalImage.alt = productName;
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeImageModal();
+            }
+        });
     </script>
 </body>
 </html>
