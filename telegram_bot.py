@@ -34,7 +34,9 @@ LOCAL_REPO_PATH = Path("/tmp/catalogo")
 JSON_FILENAME = "productos.json"
 REPO_BRANCH = "main"
 
+# Estados de conversación
 NOMBRE, PRECIO, DESCRIPCION, TALLAS, CATEGORIA, IMAGEN = range(6)
+EDITAR_CAMPO, EDITAR_VALOR = range(6, 8)
 
 productos_db = {}
 
@@ -130,6 +132,17 @@ def save_and_push_productos():
         print(f"❌ Error: {e}")
         return False
 
+def format_precio(precio):
+    """Formatea el precio sin decimales si es entero"""
+    try:
+        precio_float = float(precio)
+        if precio_float == int(precio_float):
+            return f"{int(precio_float):,}"
+        else:
+            return f"{precio_float:,.2f}"
+    except:
+        return str(precio)
+
 # SECURITY
 def es_admin(user_id):
     return user_id in ADMIN_IDS
@@ -151,43 +164,350 @@ async def start(update, context):
     user = update.effective_user
     await update.message.reply_text(
         f"👋 *Bienvenido {user.first_name}*\n\n"
-        f"📋 Comandos disponibles:\n"
-        f"• /agregar - Agregar producto\n"
-        f"• /listar - Ver productos\n"
-        f"• /catalogo - Ver URL del catálogo\n\n"
+        f"📋 *Comandos disponibles:*\n\n"
+        f"🆕 /agregar - Agregar producto\n"
+        f"📋 /listar - Ver todos los productos\n"
+        f"✏️ /editar - Editar un producto\n"
+        f"🗑️ /eliminar - Eliminar un producto\n"
+        f"🌐 /catalogo - Ver URL del catálogo\n"
+        f"❓ /ayuda - Ver ayuda detallada\n\n"
         f"💡 Tienes acceso de administrador",
+        parse_mode="Markdown"
+    )
+
+@solo_admins
+async def ayuda(update, context):
+    await update.message.reply_text(
+        "📚 *Guía de Uso del Bot*\n\n"
+        "*🆕 Agregar Producto:*\n"
+        "1. Usa /agregar\n"
+        "2. Sigue los pasos:\n"
+        "   • Nombre del producto\n"
+        "   • Precio (solo números)\n"
+        "   • Descripción (opcional)\n"
+        "   • Tallas disponibles (opcional)\n"
+        "   • Categoría (zapatillas/ropa)\n"
+        "   • Foto del producto (opcional)\n"
+        "3. Usa /saltar para omitir campos opcionales\n"
+        "4. Usa /cancelar para cancelar\n\n"
+        "*📋 Ver Productos:*\n"
+        "• /listar - Muestra todos los productos\n\n"
+        "*✏️ Editar Producto:*\n"
+        "1. Usa /editar\n"
+        "2. Selecciona el producto\n"
+        "3. Elige qué campo editar\n"
+        "4. Ingresa el nuevo valor\n\n"
+        "*🗑️ Eliminar Producto:*\n"
+        "1. Usa /eliminar\n"
+        "2. Selecciona el producto a eliminar\n"
+        "3. Confirma la eliminación\n\n"
+        "*🌐 Ver Catálogo Web:*\n"
+        "• /catalogo - Muestra la URL de tu tienda\n\n"
+        "*💡 Consejos:*\n"
+        "• Las fotos mejoran las ventas\n"
+        "• Descripciones claras atraen más clientes\n"
+        "• Especifica todas las tallas disponibles\n"
+        "• Revisa los precios antes de publicar",
         parse_mode="Markdown"
     )
 
 @solo_admins
 async def catalogo(update, context):
     url = f"https://{GITHUB_USER}.github.io/{GITHUB_REPO.split('/',1)[1] if '/' in GITHUB_REPO else GITHUB_REPO}/"
-    await update.message.reply_text(f"🌐 *Catálogo web:*\n{url}", parse_mode="Markdown")
+    await update.message.reply_text(
+        f"🌐 *Catálogo Web:*\n\n"
+        f"{url}\n\n"
+        f"📱 Comparte este enlace con tus clientes",
+        parse_mode="Markdown"
+    )
 
 @solo_admins
 async def listar(update, context):
     if not productos_db:
         await update.message.reply_text("📭 No hay productos en el catálogo")
         return
-    texto = "📋 *Productos:*\n\n"
-    for i, p in enumerate(sorted(productos_db.values(), key=lambda x: x.get("fecha",""), reverse=True), 1):
+    
+    productos_ordenados = sorted(productos_db.values(), key=lambda x: x.get("fecha",""), reverse=True)
+    texto = f"📋 *Productos ({len(productos_ordenados)}):*\n\n"
+    
+    for i, p in enumerate(productos_ordenados, 1):
         cat_emoji = "👟" if p.get("categoria") == "zapatillas" else "👕"
-        texto += f"{i}. {cat_emoji} *{p.get('nombre')}*\n   💰 ${p.get('precio')}\n\n"
-    await update.message.reply_text(texto, parse_mode="Markdown")
+        precio_fmt = format_precio(p.get('precio', '0'))
+        texto += f"{i}. {cat_emoji} *{p.get('nombre')}*\n   💰 ${precio_fmt}\n"
+        if p.get('tallas'):
+            texto += f"   📏 Tallas: {p.get('tallas')}\n"
+        texto += f"   🆔 ID: `{p.get('id')}`\n\n"
+        
+        # Telegram tiene límite de 4096 caracteres
+        if len(texto) > 3500:
+            await update.message.reply_text(texto, parse_mode="Markdown")
+            texto = ""
+    
+    if texto:
+        await update.message.reply_text(texto, parse_mode="Markdown")
 
+@solo_admins
+async def eliminar_comando(update, context):
+    if not productos_db:
+        await update.message.reply_text("📭 No hay productos para eliminar")
+        return
+    
+    # Crear botones con los productos
+    productos_ordenados = sorted(productos_db.values(), key=lambda x: x.get("fecha",""), reverse=True)
+    keyboard = []
+    
+    for p in productos_ordenados[:20]:  # Máximo 20 para no saturar
+        cat_emoji = "👟" if p.get("categoria") == "zapatillas" else "👕"
+        precio_fmt = format_precio(p.get('precio', '0'))
+        texto_boton = f"{cat_emoji} {p.get('nombre')} - ${precio_fmt}"
+        keyboard.append([InlineKeyboardButton(texto_boton, callback_data=f"del_{p.get('id')}")])
+    
+    keyboard.append([InlineKeyboardButton("❌ Cancelar", callback_data="del_cancelar")])
+    
+    await update.message.reply_text(
+        "🗑️ *Eliminar Producto*\n\nSelecciona el producto que deseas eliminar:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+
+async def eliminar_callback(update, context):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "del_cancelar":
+        await query.edit_message_text("❌ Eliminación cancelada")
+        return
+    
+    if query.data.startswith("del_confirm_"):
+        producto_id = query.data.replace("del_confirm_", "")
+        if producto_id in productos_db:
+            producto = productos_db[producto_id]
+            del productos_db[producto_id]
+            
+            if save_and_push_productos():
+                cat_emoji = "👟" if producto.get("categoria") == "zapatillas" else "👕"
+                await query.edit_message_text(
+                    f"✅ *Producto eliminado*\n\n"
+                    f"{cat_emoji} {producto.get('nombre')}\n"
+                    f"💰 ${format_precio(producto.get('precio', '0'))}\n\n"
+                    f"🌐 Cambios sincronizados con el catálogo web",
+                    parse_mode="Markdown"
+                )
+            else:
+                await query.edit_message_text("⚠️ Error al guardar cambios en GitHub")
+        else:
+            await query.edit_message_text("❌ Producto no encontrado")
+        return
+    
+    if query.data.startswith("del_"):
+        producto_id = query.data.replace("del_", "")
+        if producto_id in productos_db:
+            producto = productos_db[producto_id]
+            cat_emoji = "👟" if producto.get("categoria") == "zapatillas" else "👕"
+            
+            keyboard = [
+                [InlineKeyboardButton("✅ Sí, eliminar", callback_data=f"del_confirm_{producto_id}")],
+                [InlineKeyboardButton("❌ No, cancelar", callback_data="del_cancelar")]
+            ]
+            
+            await query.edit_message_text(
+                f"⚠️ *¿Confirmar eliminación?*\n\n"
+                f"{cat_emoji} *{producto.get('nombre')}*\n"
+                f"💰 ${format_precio(producto.get('precio', '0'))}\n"
+                f"📏 Tallas: {producto.get('tallas', 'N/A')}\n\n"
+                f"Esta acción no se puede deshacer.",
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode="Markdown"
+            )
+
+@solo_admins
+async def editar_comando(update, context):
+    if not productos_db:
+        await update.message.reply_text("📭 No hay productos para editar")
+        return ConversationHandler.END
+    
+    # Crear botones con los productos
+    productos_ordenados = sorted(productos_db.values(), key=lambda x: x.get("fecha",""), reverse=True)
+    keyboard = []
+    
+    for p in productos_ordenados[:20]:
+        cat_emoji = "👟" if p.get("categoria") == "zapatillas" else "👕"
+        precio_fmt = format_precio(p.get('precio', '0'))
+        texto_boton = f"{cat_emoji} {p.get('nombre')} - ${precio_fmt}"
+        keyboard.append([InlineKeyboardButton(texto_boton, callback_data=f"edit_{p.get('id')}")])
+    
+    keyboard.append([InlineKeyboardButton("❌ Cancelar", callback_data="edit_cancelar")])
+    
+    await update.message.reply_text(
+        "✏️ *Editar Producto*\n\nSelecciona el producto que deseas editar:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+    return EDITAR_CAMPO
+
+async def editar_seleccionar_campo(update, context):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "edit_cancelar":
+        await query.edit_message_text("❌ Edición cancelada")
+        return ConversationHandler.END
+    
+    if query.data.startswith("edit_"):
+        producto_id = query.data.replace("edit_", "")
+        if producto_id in productos_db:
+            context.user_data['edit_producto_id'] = producto_id
+            producto = productos_db[producto_id]
+            
+            keyboard = [
+                [InlineKeyboardButton("📝 Nombre", callback_data="editfield_nombre")],
+                [InlineKeyboardButton("💰 Precio", callback_data="editfield_precio")],
+                [InlineKeyboardButton("📄 Descripción", callback_data="editfield_descripcion")],
+                [InlineKeyboardButton("📏 Tallas", callback_data="editfield_tallas")],
+                [InlineKeyboardButton("🏷️ Categoría", callback_data="editfield_categoria")],
+                [InlineKeyboardButton("📸 Imagen", callback_data="editfield_imagen")],
+                [InlineKeyboardButton("❌ Cancelar", callback_data="edit_cancelar")]
+            ]
+            
+            cat_emoji = "👟" if producto.get("categoria") == "zapatillas" else "👕"
+            await query.edit_message_text(
+                f"✏️ *Editando:*\n\n"
+                f"{cat_emoji} *{producto.get('nombre')}*\n"
+                f"💰 ${format_precio(producto.get('precio', '0'))}\n\n"
+                f"¿Qué campo deseas editar?",
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode="Markdown"
+            )
+            return EDITAR_CAMPO
+    
+    return ConversationHandler.END
+
+async def editar_pedir_valor(update, context):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "edit_cancelar":
+        await query.edit_message_text("❌ Edición cancelada")
+        return ConversationHandler.END
+    
+    if query.data == "editfield_categoria":
+        keyboard = [
+            [InlineKeyboardButton("👟 Zapatillas", callback_data="editcat_zapatillas")],
+            [InlineKeyboardButton("👕 Ropa", callback_data="editcat_ropa")],
+            [InlineKeyboardButton("❌ Cancelar", callback_data="edit_cancelar")]
+        ]
+        await query.edit_message_text(
+            "🏷️ Selecciona la nueva categoría:",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return EDITAR_CAMPO
+    
+    campo = query.data.replace("editfield_", "")
+    context.user_data['edit_campo'] = campo
+    
+    campos_nombres = {
+        "nombre": "📝 Nombre",
+        "precio": "💰 Precio",
+        "descripcion": "📄 Descripción",
+        "tallas": "📏 Tallas",
+        "imagen": "📸 URL de imagen"
+    }
+    
+    await query.edit_message_text(
+        f"✏️ Ingresa el nuevo valor para {campos_nombres.get(campo, campo)}:\n\n"
+        f"_(o envía /cancelar para cancelar)_",
+        parse_mode="Markdown"
+    )
+    return EDITAR_VALOR
+
+async def editar_guardar_valor(update, context):
+    nuevo_valor = update.message.text.strip()
+    producto_id = context.user_data.get('edit_producto_id')
+    campo = context.user_data.get('edit_campo')
+    
+    if producto_id not in productos_db:
+        await update.message.reply_text("❌ Producto no encontrado")
+        return ConversationHandler.END
+    
+    # Validar precio
+    if campo == "precio":
+        try:
+            precio_limpio = nuevo_valor.replace("$", "").replace(",", "").replace(".", "")
+            precio_float = float(precio_limpio)
+            nuevo_valor = f"{precio_float:.0f}"
+        except:
+            await update.message.reply_text("❌ Precio inválido. Edición cancelada.")
+            return ConversationHandler.END
+    
+    # Guardar cambio
+    productos_db[producto_id][campo] = nuevo_valor
+    
+    if save_and_push_productos():
+        producto = productos_db[producto_id]
+        cat_emoji = "👟" if producto.get("categoria") == "zapatillas" else "👕"
+        await update.message.reply_text(
+            f"✅ *Producto actualizado*\n\n"
+            f"{cat_emoji} *{producto.get('nombre')}*\n"
+            f"💰 ${format_precio(producto.get('precio', '0'))}\n\n"
+            f"🌐 Cambios sincronizados con el catálogo web",
+            parse_mode="Markdown"
+        )
+    else:
+        await update.message.reply_text("⚠️ Error al guardar cambios en GitHub")
+    
+    context.user_data.clear()
+    return ConversationHandler.END
+
+async def editar_guardar_categoria(update, context):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "edit_cancelar":
+        await query.edit_message_text("❌ Edición cancelada")
+        context.user_data.clear()
+        return ConversationHandler.END
+    
+    producto_id = context.user_data.get('edit_producto_id')
+    nueva_categoria = query.data.replace("editcat_", "")
+    
+    if producto_id in productos_db:
+        productos_db[producto_id]['categoria'] = nueva_categoria
+        
+        if save_and_push_productos():
+            producto = productos_db[producto_id]
+            cat_emoji = "👟" if nueva_categoria == "zapatillas" else "👕"
+            await query.edit_message_text(
+                f"✅ *Producto actualizado*\n\n"
+                f"{cat_emoji} *{producto.get('nombre')}*\n"
+                f"💰 ${format_precio(producto.get('precio', '0'))}\n\n"
+                f"🌐 Cambios sincronizados con el catálogo web",
+                parse_mode="Markdown"
+            )
+        else:
+            await query.edit_message_text("⚠️ Error al guardar cambios en GitHub")
+    
+    context.user_data.clear()
+    return ConversationHandler.END
+
+# AGREGAR PRODUCTO
 @solo_admins
 async def agregar_inicio(update, context):
     context.user_data.clear()
     await update.message.reply_text(
         "✨ *Agregar Producto*\n\n"
-        "Paso 1/6: Escribe el *nombre* del producto",
+        "Paso 1/6: Escribe el *nombre* del producto\n\n"
+        "_(o /cancelar para cancelar)_",
         parse_mode="Markdown"
     )
     return NOMBRE
 
 async def recibir_nombre(update, context):
     context.user_data['nombre'] = update.message.text.strip()
-    await update.message.reply_text("💰 Paso 2/6: Escribe el *precio* (solo números)", parse_mode="Markdown")
+    await update.message.reply_text(
+        "💰 Paso 2/6: Escribe el *precio*\n\n"
+        "Ejemplos: 150000, 150.50, 1500",
+        parse_mode="Markdown"
+    )
     return PRECIO
 
 async def recibir_precio(update, context):
@@ -198,12 +518,21 @@ async def recibir_precio(update, context):
         await update.message.reply_text("❌ Precio inválido. Escribe solo números:")
         return PRECIO
     context.user_data['precio'] = f"{precio:.0f}"
-    await update.message.reply_text("📝 Paso 3/6: Escribe una *descripción*\n(o /saltar)", parse_mode="Markdown")
+    await update.message.reply_text(
+        "📝 Paso 3/6: Escribe una *descripción*\n\n"
+        "_(o /saltar para omitir)_",
+        parse_mode="Markdown"
+    )
     return DESCRIPCION
 
 async def recibir_descripcion(update, context):
     context.user_data['descripcion'] = update.message.text.strip()
-    await update.message.reply_text("📏 Paso 4/6: ¿Qué *tallas* hay?\n(ej: 36-42 o /saltar)", parse_mode="Markdown")
+    await update.message.reply_text(
+        "📏 Paso 4/6: ¿Qué *tallas* hay disponibles?\n\n"
+        "Ejemplos: 36-42, 38,40,42, S,M,L,XL\n"
+        "_(o /saltar para omitir)_",
+        parse_mode="Markdown"
+    )
     return TALLAS
 
 async def recibir_tallas(update, context):
@@ -212,7 +541,11 @@ async def recibir_tallas(update, context):
         [InlineKeyboardButton("👟 Zapatillas", callback_data="cat_zapatillas")],
         [InlineKeyboardButton("👕 Ropa", callback_data="cat_ropa")]
     ]
-    await update.message.reply_text("🏷️ Paso 5/6: Selecciona la *categoría*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    await update.message.reply_text(
+        "🏷️ Paso 5/6: Selecciona la *categoría*",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
     return CATEGORIA
 
 async def recibir_categoria(update, context):
@@ -220,7 +553,12 @@ async def recibir_categoria(update, context):
     await query.answer()
     context.user_data['categoria'] = query.data.replace("cat_", "")
     cat_emoji = "👟" if query.data == "cat_zapatillas" else "👕"
-    await query.edit_message_text(f"✅ Categoría: {cat_emoji}\n\n📸 Paso 6/6: Envía una *foto*\n(o /saltar)", parse_mode="Markdown")
+    await query.edit_message_text(
+        f"✅ Categoría: {cat_emoji}\n\n"
+        f"📸 Paso 6/6: Envía una *foto* del producto\n\n"
+        f"_(o /saltar para omitir)_",
+        parse_mode="Markdown"
+    )
     return IMAGEN
 
 async def recibir_imagen(update, context):
@@ -236,12 +574,15 @@ async def recibir_imagen(update, context):
 async def saltar(update, context):
     if 'descripcion' not in context.user_data:
         context.user_data['descripcion'] = ""
-        await update.message.reply_text("📏 Tallas (o /saltar)")
+        await update.message.reply_text("📏 Paso 4/6: Tallas (o /saltar)")
         return TALLAS
     if 'tallas' not in context.user_data:
         context.user_data['tallas'] = ""
-        keyboard = [[InlineKeyboardButton("👟 Zapatillas", callback_data="cat_zapatillas")], [InlineKeyboardButton("👕 Ropa", callback_data="cat_ropa")]]
-        await update.message.reply_text("🏷️ Categoría:", reply_markup=InlineKeyboardMarkup(keyboard))
+        keyboard = [
+            [InlineKeyboardButton("👟 Zapatillas", callback_data="cat_zapatillas")],
+            [InlineKeyboardButton("👕 Ropa", callback_data="cat_ropa")]
+        ]
+        await update.message.reply_text("🏷️ Paso 5/6: Categoría", reply_markup=InlineKeyboardMarkup(keyboard))
         return CATEGORIA
     context.user_data['imagen'] = ""
     return await finalizar_producto(update, context)
@@ -275,11 +616,12 @@ async def finalizar_producto(update, context):
         
         if saved:
             await update.message.reply_text(
-                f"✅ *Producto agregado*\n\n"
+                f"✅ *Producto agregado exitosamente*\n\n"
                 f"{cat_emoji} *{producto['nombre']}*\n"
-                f"💰 ${producto['precio']}\n"
+                f"💰 ${format_precio(producto['precio'])}\n"
+                f"📏 Tallas: {producto['tallas'] or 'N/A'}\n"
                 f"👤 Por: {user.first_name}\n\n"
-                f"🌐 Ya está en el catálogo web",
+                f"🌐 Ya está visible en el catálogo web",
                 parse_mode="Markdown"
             )
         else:
@@ -335,27 +677,67 @@ def main():
     
     # Bot
     app = ApplicationBuilder().token(BOT_TOKEN).build()
+    
+    # Comandos básicos
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("ayuda", ayuda))
     app.add_handler(CommandHandler("listar", listar))
     app.add_handler(CommandHandler("catalogo", catalogo))
+    app.add_handler(CommandHandler("eliminar", eliminar_comando))
     
-    conv = ConversationHandler(
+    # Callbacks para eliminar
+    app.add_handler(CallbackQueryHandler(eliminar_callback, pattern="^del_"))
+    
+    # Conversación para agregar producto
+    conv_agregar = ConversationHandler(
         entry_points=[CommandHandler("agregar", agregar_inicio)],
         states={
             NOMBRE: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_nombre)],
             PRECIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_precio)],
-            DESCRIPCION: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_descripcion), CommandHandler("saltar", saltar)],
-            TALLAS: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_tallas), CommandHandler("saltar", saltar)],
+            DESCRIPCION: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_descripcion),
+                CommandHandler("saltar", saltar)
+            ],
+            TALLAS: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_tallas),
+                CommandHandler("saltar", saltar)
+            ],
             CATEGORIA: [CallbackQueryHandler(recibir_categoria, pattern="^cat_")],
-            IMAGEN: [MessageHandler(filters.PHOTO, recibir_imagen), MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_imagen), CommandHandler("saltar", saltar)]
+            IMAGEN: [
+                MessageHandler(filters.PHOTO, recibir_imagen),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_imagen),
+                CommandHandler("saltar", saltar)
+            ]
         },
         fallbacks=[CommandHandler("cancelar", cancelar)],
         per_message=False
     )
     
-    app.add_handler(conv)
+    # Conversación para editar producto
+    conv_editar = ConversationHandler(
+        entry_points=[CommandHandler("editar", editar_comando)],
+        states={
+            EDITAR_CAMPO: [
+                CallbackQueryHandler(editar_seleccionar_campo, pattern="^edit_"),
+                CallbackQueryHandler(editar_pedir_valor, pattern="^editfield_"),
+                CallbackQueryHandler(editar_guardar_categoria, pattern="^editcat_")
+            ],
+            EDITAR_VALOR: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, editar_guardar_valor)
+            ]
+        },
+        fallbacks=[CommandHandler("cancelar", cancelar)],
+        per_message=False
+    )
     
-    print("🤖 Bot iniciado (modo polling)\n")
+    app.add_handler(conv_agregar)
+    app.add_handler(conv_editar)
+    
+    print("🤖 Bot iniciado (modo polling)")
+    print(f"👥 Administradores: {ADMIN_IDS}")
+    print(f"📁 Repositorio: {GITHUB_USER}/{GITHUB_REPO}")
+    print(f"📦 Productos cargados: {len(productos_db)}\n")
+    
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
