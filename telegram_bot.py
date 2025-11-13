@@ -2,10 +2,8 @@
 import os
 import json
 import subprocess
-import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes, ConversationHandler
 
@@ -634,21 +632,8 @@ async def finalizar_producto(update, context):
         context.user_data.clear()
         return ConversationHandler.END
 
-# HEALTH SERVER
-class HealthCheckHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/plain')
-        self.end_headers()
-        self.wfile.write(b'Bot OK')
-    def log_message(self, format, *args):
-        pass
-
-def start_health_server():
-    port = int(os.getenv('PORT', 10000))
-    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
-    print(f"🩺 Servidor HTTP en puerto {port}")
-    server.serve_forever()
+# HEALTH SERVER (ya no es necesario con webhook)
+# run_webhook ya incluye un servidor HTTP completo
 
 # MAIN
 def main():
@@ -742,14 +727,13 @@ def main():
     if RENDER_EXTERNAL_URL:
         # Modo WEBHOOK (Render)
         print(f"🌐 Modo WEBHOOK en {RENDER_EXTERNAL_URL}")
+        print(f"🩺 Puerto: {PORT}")
         
-        # Iniciar servidor HTTP en thread separado
-        threading.Thread(target=start_health_server, daemon=True).start()
-        
-        # Configurar webhook
+        # Configurar webhook - run_webhook ya incluye el servidor HTTP
         webhook_url = f"{RENDER_EXTERNAL_URL}/{BOT_TOKEN}"
-        print(f"🔗 Webhook URL: {webhook_url}")
+        print(f"🔗 Webhook URL: {webhook_url}\n")
         
+        # run_webhook ya maneja el servidor HTTP completo
         app.run_webhook(
             listen="0.0.0.0",
             port=PORT,
