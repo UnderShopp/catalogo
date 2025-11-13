@@ -19,5 +19,16 @@
     "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_17.jpg",
     "fecha": "2025-11-13T02:14:18.533977+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1763001380",
+    "nombre": "LV Skate Azul",
+    "precio": "180000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_18.jpg",
+    "fecha": "2025-11-13T02:36:20.591389+00:00",
+    "agregado_por": "S"
   }
 ]
