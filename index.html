@@ -778,7 +778,7 @@
                 card.className = 'product-card';
                 
                 card.innerHTML = `
-                    <div class="product-image" onclick="openImageModal('${producto.imagen || ''}', '${producto.nombre}')">
+                    <div class="product-image" data-image="${producto.imagen || ''}" data-name="${producto.nombre}">
                         ${producto.imagen 
                             ? `<img src="${producto.imagen}" alt="${producto.nombre}">`
                             : '<div class="placeholder-icon">👟</div>'
@@ -794,7 +794,7 @@
                         <div class="product-details">
                             <div class="price-section">
                                 <div class="price-label">Precio</div>
-                                <div class="product-price">$${formatPrice(producto.precio)}</div>
+                                <div class="product-price">${formatPrice(producto.precio)}</div>
                                 ${producto.tallas 
                                     ? `<div class="product-sizes">
                                         <span>📏</span>
@@ -803,13 +803,34 @@
                                     : ''
                                 }
                             </div>
-                            <button class="whatsapp-btn" onclick="consultarProducto('${escapeQuotes(producto.nombre)}', '${producto.precio}', '${producto.tallas || ''}')">
+                            <button class="whatsapp-btn" data-nombre="${producto.nombre}" data-precio="${producto.precio}" data-tallas="${producto.tallas || ''}">
                                 <span>💬</span>
                                 <span>Consultar por WhatsApp</span>
                             </button>
                         </div>
                     </div>
                 `;
+                
+                // Agregar event listener para la imagen
+                const imageDiv = card.querySelector('.product-image');
+                imageDiv.addEventListener('click', function() {
+                    const imgSrc = this.getAttribute('data-image');
+                    const imgName = this.getAttribute('data-name');
+                    if (imgSrc) {
+                        openImageModal(imgSrc, imgName);
+                    }
+                });
+                
+                // Agregar event listener para el botón de WhatsApp
+                const whatsappBtn = card.querySelector('.whatsapp-btn');
+                whatsappBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const nombre = this.getAttribute('data-nombre');
+                    const precio = this.getAttribute('data-precio');
+                    const tallas = this.getAttribute('data-tallas');
+                    consultarProducto(nombre, precio, tallas);
+                });
                 
                 grid.appendChild(card);
             });
@@ -827,9 +848,7 @@
             });
         }
 
-        function escapeQuotes(str) {
-            return str.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-        }
+
 
         function showEmptyState() {
             const grid = document.getElementById('productsGrid');
