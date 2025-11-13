@@ -3,19 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>👟 Under Shopp - Catálogo Premium</title>
+  <title>Under Shopp - Catálogo Premium</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E👟%3C/text%3E%3C/svg%3E">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    /* (todo el CSS igual que en tu versión) */
-    /* ... lo dejo igual, solo se actualiza JS */
+    /* Aquí va todo tu CSS original */
   </style>
 </head>
 <body>
   <header class="header">
     <div class="header-content">
       <div class="brand">
-        <div class="brand-icon">👟</div>
+        <div class="brand-icon"></div>
         <div class="brand-text">
           <h1>Under Shopp</h1>
           <p>Calzado de Lujo</p>
@@ -23,34 +22,34 @@
       </div>
       <div class="search-bar">
         <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre, marca, estilo...">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon"></span>
       </div>
     </div>
   </header>
 
   <div class="categories">
-    <button class="category-btn active" onclick="filterCategory('todos', event)">📦 Todos</button>
-    <button class="category-btn" onclick="filterCategory('zapatillas', event)">👟 Zapatillas</button>
-    <button class="category-btn" onclick="filterCategory('ropa', event)">👕 Ropa</button>
+    <button class="category-btn active" onclick="filterCategory('todos', event)">Todos</button>
+    <button class="category-btn" onclick="filterCategory('zapatillas', event)">Zapatillas</button>
+    <button class="category-btn" onclick="filterCategory('ropa', event)">Ropa</button>
   </div>
 
   <div class="stats-bar">
     <div class="stat-item">
-      <span class="stat-icon">📦</span>
+      <span class="stat-icon"></span>
       <div class="stat-text">
         <h3 id="productCount">0</h3>
         <p>Productos</p>
       </div>
     </div>
     <div class="stat-item">
-      <span class="stat-icon">⭐</span>
+      <span class="stat-icon"></span>
       <div class="stat-text">
         <h3>100%</h3>
         <p>Calidad</p>
       </div>
     </div>
     <div class="stat-item">
-      <span class="stat-icon">🚚</span>
+      <span class="stat-icon"></span>
       <div class="stat-text">
         <h3>24h</h3>
         <p>Envío Rápido</p>
@@ -68,7 +67,7 @@
   </div>
 
   <a href="#" class="whatsapp-float" onclick="contactarVendedor(event)">
-    <span style="font-size: 2.5rem;">💬</span>
+    <span></span>
   </a>
 
   <!-- Modal de imagen -->
@@ -85,7 +84,7 @@
     <p>Catálogo administrado vía Telegram Bot</p>
     <p style="margin-top: 0.5rem; font-size: 0.8rem;">Actualización automática en tiempo real</p>
     <div class="footer-badge">
-      <span>🔒</span> <span>Sistema Seguro</span>
+      <span></span> <span>Sistema Seguro</span>
     </div>
   </footer>
 
@@ -101,14 +100,12 @@
   let currentCategory = 'todos';
   let currentPhoneIndex = 0;
 
-  // ===== INICIO =====
   document.addEventListener('DOMContentLoaded', async () => {
     await loadProducts();
     setupSearch();
     startAutoRefresh();
   });
 
-  // ===== CARGA DE PRODUCTOS =====
   async function loadProducts() {
     try {
       const response = await fetch('productos.json?t=' + Date.now());
@@ -122,7 +119,6 @@
     }
   }
 
-  // ===== RENDERIZADO =====
   function renderProducts() {
     const grid = document.getElementById('productsGrid');
     const count = document.getElementById('productCount');
@@ -139,7 +135,7 @@
       card.className = 'product-card';
       card.innerHTML = `
         <div class="product-image" data-image="${prod.imagen}" data-name="${prod.nombre}">
-          ${prod.imagen ? `<img src="${prod.imagen}" alt="${prod.nombre}">` : '<div class="placeholder-icon">👟</div>'}
+          ${prod.imagen ? `<img src="${prod.imagen}" alt="${prod.nombre}">` : '<div class="placeholder-icon"></div>'}
           <div class="product-badge">Premium</div>
         </div>
         <div class="product-info">
@@ -149,46 +145,38 @@
             <div class="price-section">
               <div class="price-label">Precio</div>
               <div class="product-price">${formatPrice(prod.precio)}</div>
-              ${prod.tallas ? `<div class="product-sizes">📏 Tallas: ${prod.tallas}</div>` : ''}
+              ${prod.tallas ? `<div class="product-sizes">Tallas: ${prod.tallas}</div>` : ''}
             </div>
             <a href="#" class="whatsapp-btn"
               data-nombre="${prod.nombre}"
               data-precio="${prod.precio}"
               data-tallas="${prod.tallas || ''}"
               data-imagen="${prod.imagen}">
-              💬 Consultar por WhatsApp
+              Consultar por WhatsApp
             </a>
           </div>
         </div>
       `;
-      // eventos
-      card.querySelector('.product-image').onclick = () =>
-        openImageModal(prod.imagen, prod.nombre);
-
+      card.querySelector('.product-image').onclick = () => openImageModal(prod.imagen, prod.nombre);
       card.querySelector('.whatsapp-btn').onclick = (e) => {
         e.preventDefault();
         consultarProducto(prod.nombre, prod.precio, prod.tallas);
       };
-
       grid.appendChild(card);
     });
   }
 
-  // ===== FORMATO DE PRECIO =====
   const formatPrice = (p) => parseFloat(p).toLocaleString('es-CO');
 
-  // ===== ESTADO VACÍO =====
   function showEmptyState() {
     document.getElementById('productsGrid').innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">📦</div>
         <h2>Catálogo vacío</h2>
         <p>Pronto agregaremos productos nuevos.</p>
       </div>
     `;
   }
 
-  // ===== FILTROS =====
   function filterCategory(cat, e) {
     currentCategory = cat;
     document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
@@ -199,7 +187,6 @@
     renderProducts();
   }
 
-  // ===== BUSCADOR =====
   function setupSearch() {
     document.getElementById('searchInput').addEventListener('input', e => {
       const term = e.target.value.toLowerCase();
@@ -212,33 +199,29 @@
     });
   }
 
-  // ===== ROTACIÓN DE WHATSAPP =====
   function getNextPhone() {
     const phone = CONFIG.whatsappNumbers[currentPhoneIndex];
     currentPhoneIndex = (currentPhoneIndex + 1) % CONFIG.whatsappNumbers.length;
     return phone;
   }
 
-  // ===== CONSULTA =====
   function consultarProducto(nombre, precio, tallas) {
     const phone = getNextPhone();
-    const msg = `¡Hola! 👋 Estoy interesado en *${nombre}*.\n💰 Precio: ${formatPrice(precio)}${tallas ? `\n📏 Tallas: ${tallas}` : ''}\n¿Está disponible?`;
+    const msg = `¡Hola! Estoy interesado en ${nombre}. Precio: ${formatPrice(precio)}${tallas ? `, Tallas: ${tallas}` : ''}. ¿Está disponible?`;
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
     showNotification(`Contactando vendedor ${phone}...`);
     window.open(url, '_blank');
   }
 
-  // ===== BOTÓN FLOTANTE =====
   function contactarVendedor(e) {
     e.preventDefault();
     const phone = getNextPhone();
-    const msg = '¡Hola! 👋 Vi su catálogo y quiero más información.';
+    const msg = '¡Hola! Vi su catálogo y quiero más información.';
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
     showNotification('Conectando con vendedor...');
     window.open(url, '_blank');
   }
 
-  // ===== MODAL IMAGEN =====
   function openImageModal(src, name) {
     const modal = document.getElementById('imageModal');
     document.getElementById('modalImage').src = src;
@@ -248,7 +231,6 @@
     document.getElementById('imageModal').classList.remove('active');
   }
 
-  // ===== NOTIFICACIÓN =====
   function showNotification(msg) {
     const n = document.getElementById('notification');
     n.textContent = msg;
@@ -256,7 +238,6 @@
     setTimeout(() => n.classList.remove('show'), 2500);
   }
 
-  // ===== AUTO REFRESH =====
   function startAutoRefresh() {
     setInterval(loadProducts, CONFIG.autoRefreshSeconds * 1000);
   }
