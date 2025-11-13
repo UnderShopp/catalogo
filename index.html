@@ -818,6 +818,18 @@
                     }
                 });
                 
+                // Agregar event listener para el botón de WhatsApp
+                const whatsappBtn = card.querySelector('.whatsapp-btn');
+                whatsappBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const nombre = this.getAttribute('data-nombre');
+                    const precio = this.getAttribute('data-precio');
+                    const tallas = this.getAttribute('data-tallas');
+                    const imagen = this.getAttribute('data-imagen');
+                    consultarProducto(nombre, precio, tallas, imagen);
+                });
+                
                 grid.appendChild(card);
             });
             
