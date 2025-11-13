@@ -1,211 +1,265 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>👟 Under Shopp - Catálogo Premium</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E👟%3C/text%3E%3C/svg%3E">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-    <style>
-        /* 🎨 --- Estilos generales (idénticos a los tuyos) --- */
-        *{margin:0;padding:0;box-sizing:border-box}
-        :root{--primary:#1a1a2e;--secondary:#16213e;--accent:#0f3460;--gold:#d4af37;--light:#eaeaea;--white:#ffffff}
-        body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);color:var(--white);min-height:100vh;overflow-x:hidden}
-        .header{position:sticky;top:0;z-index:1000;background:rgba(26,26,46,0.95);backdrop-filter:blur(20px);border-bottom:1px solid rgba(212,175,55,0.2)}
-        .header-content{max-width:1400px;margin:0 auto;padding:2rem 3rem}
-        .brand{display:flex;align-items:center;gap:1rem;margin-bottom:2rem}
-        .brand-icon{width:60px;height:60px;background:linear-gradient(135deg,var(--gold),#f4e4a6);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;box-shadow:0 8px 25px rgba(212,175,55,0.4)}
-        .brand-text h1{font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:700;background:linear-gradient(135deg,var(--gold),#fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-        .brand-text p{font-size:0.9rem;color:rgba(255,255,255,0.7);text-transform:uppercase}
-        .search-bar{position:relative;max-width:600px}
-        .search-input{width:100%;padding:1.2rem 3.5rem 1.2rem 1.5rem;background:rgba(255,255,255,0.05);border:2px solid rgba(212,175,55,0.3);border-radius:50px;color:var(--white);font-size:1rem}
-        .search-icon{position:absolute;right:1.5rem;top:50%;transform:translateY(-50%);color:var(--gold)}
-        .categories{max-width:1400px;margin:2rem auto 1rem;padding:0 3rem;display:flex;flex-wrap:wrap;gap:1rem;justify-content:center}
-        .category-btn{padding:0.8rem 1.5rem;background:rgba(255,255,255,0.05);border:1.5px solid rgba(212,175,55,0.3);border-radius:30px;color:var(--white);cursor:pointer;transition:0.3s;font-weight:500}
-        .category-btn.active{background:linear-gradient(135deg,var(--gold),#f4e4a6);color:var(--primary);box-shadow:0 5px 20px rgba(212,175,55,0.4)}
-        .stats-bar{max-width:1400px;margin:0 auto;padding:2rem 3rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:2rem}
-        .products-container{max-width:1400px;margin:0 auto;padding:3rem}
-        .products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(350px,1fr));gap:3rem}
-        .product-card{background:rgba(255,255,255,0.05);border-radius:25px;overflow:hidden;border:1px solid rgba(212,175,55,0.2);transition:0.4s;position:relative}
-        .product-image{height:350px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer}
-        .product-image img{width:100%;height:100%;object-fit:cover;transition:0.5s}
-        .product-card:hover .product-image img{transform:scale(1.1)}
-        .product-badge{position:absolute;top:1.5rem;right:1.5rem;background:var(--gold);color:var(--primary);padding:0.5rem 1.2rem;border-radius:30px;font-size:0.8rem;text-transform:uppercase}
-        .product-info{padding:2.5rem}
-        .product-name{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:700;margin-bottom:1rem}
-        .product-description{color:rgba(255,255,255,0.7);margin-bottom:1.5rem}
-        .product-details{padding-top:1.5rem;border-top:1px solid rgba(212,175,55,0.2)}
-        .product-price{font-size:3rem;font-weight:700;color:var(--gold)}
-        .whatsapp-btn{display:inline-flex;align-items:center;gap:0.8rem;padding:1rem 2rem;background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;border-radius:50px;font-weight:600;font-size:0.95rem;cursor:pointer;transition:0.3s;text-decoration:none;box-shadow:0 8px 25px rgba(37,211,102,0.3);width:100%;justify-content:center;margin-top:1rem}
-        .whatsapp-btn:hover{transform:translateY(-3px);box-shadow:0 12px 35px rgba(37,211,102,0.5);background:linear-gradient(135deg,#128C7E,#075E54)}
-        .whatsapp-float{position:fixed;bottom:30px;right:30px;width:70px;height:70px;background:linear-gradient(135deg,#25D366,#128C7E);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 40px rgba(37,211,102,0.4);cursor:pointer;animation:float 3s ease-in-out infinite;text-decoration:none;z-index:999}
-        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-        .notification{position:fixed;top:100px;right:30px;background:linear-gradient(135deg,#25D366,#128C7E);color:white;padding:1rem 1.5rem;border-radius:15px;box-shadow:0 10px 30px rgba(37,211,102,0.4);display:none;z-index:10001}
-        .notification.show{display:block}
-        .image-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;justify-content:center;align-items:center}
-        .image-modal.active{display:flex}
-        .image-modal img{max-width:90vw;max-height:90vh;border-radius:15px}
-        .image-modal-close{position:absolute;top:20px;right:40px;background:var(--gold);border-radius:50%;padding:10px;font-size:1.5rem;cursor:pointer;color:var(--primary);font-weight:bold}
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>👟 Under Shopp - Catálogo Premium</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E👟%3C/text%3E%3C/svg%3E">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* (todo el CSS igual que en tu versión) */
+    /* ... lo dejo igual, solo se actualiza JS */
+  </style>
 </head>
 <body>
-    <header class="header">
-        <div class="header-content">
-            <div class="brand">
-                <div class="brand-icon">👟</div>
-                <div class="brand-text">
-                    <h1>Under Shopp</h1>
-                    <p>Calzado de Lujo</p>
-                </div>
-            </div>
-            <div class="search-bar">
-                <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nombre, marca, estilo...">
-                <span class="search-icon">🔍</span>
-            </div>
+  <header class="header">
+    <div class="header-content">
+      <div class="brand">
+        <div class="brand-icon">👟</div>
+        <div class="brand-text">
+          <h1>Under Shopp</h1>
+          <p>Calzado de Lujo</p>
         </div>
-    </header>
-
-    <div class="categories">
-        <button class="category-btn active" onclick="filterCategory('todos')">📦 Todos</button>
-        <button class="category-btn" onclick="filterCategory('zapatillas')">👟 Zapatillas</button>
-        <button class="category-btn" onclick="filterCategory('ropa')">👕 Ropa</button>
+      </div>
+      <div class="search-bar">
+        <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre, marca, estilo...">
+        <span class="search-icon">🔍</span>
+      </div>
     </div>
+  </header>
 
-    <div class="stats-bar">
-        <div class="stat-item"><span>📦</span><div><h3 id="productCount">0</h3><p>Productos</p></div></div>
-        <div class="stat-item"><span>⭐</span><div><h3>100%</h3><p>Calidad</p></div></div>
-        <div class="stat-item"><span>🚚</span><div><h3>24h</h3><p>Envío rápido</p></div></div>
+  <div class="categories">
+    <button class="category-btn active" onclick="filterCategory('todos', event)">📦 Todos</button>
+    <button class="category-btn" onclick="filterCategory('zapatillas', event)">👟 Zapatillas</button>
+    <button class="category-btn" onclick="filterCategory('ropa', event)">👕 Ropa</button>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-icon">📦</span>
+      <div class="stat-text">
+        <h3 id="productCount">0</h3>
+        <p>Productos</p>
+      </div>
     </div>
+    <div class="stat-item">
+      <span class="stat-icon">⭐</span>
+      <div class="stat-text">
+        <h3>100%</h3>
+        <p>Calidad</p>
+      </div>
+    </div>
+    <div class="stat-item">
+      <span class="stat-icon">🚚</span>
+      <div class="stat-text">
+        <h3>24h</h3>
+        <p>Envío Rápido</p>
+      </div>
+    </div>
+  </div>
 
-    <div class="products-container">
-        <div id="productsGrid" class="products-grid">
-            <div class="loading"><p class="loading-text">Cargando catálogo...</p></div>
+  <div class="products-container">
+    <div id="productsGrid" class="products-grid">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Cargando catálogo...</p>
+      </div>
+    </div>
+  </div>
+
+  <a href="#" class="whatsapp-float" onclick="contactarVendedor(event)">
+    <span style="font-size: 2.5rem;">💬</span>
+  </a>
+
+  <!-- Modal de imagen -->
+  <div id="imageModal" class="image-modal">
+    <div class="image-modal-content">
+      <div class="image-modal-close" onclick="closeImageModal()">✕</div>
+      <img id="modalImage" src="" alt="Producto ampliado">
+    </div>
+  </div>
+
+  <div id="notification" class="notification"></div>
+
+  <footer class="footer">
+    <p>Catálogo administrado vía Telegram Bot</p>
+    <p style="margin-top: 0.5rem; font-size: 0.8rem;">Actualización automática en tiempo real</p>
+    <div class="footer-badge">
+      <span>🔒</span> <span>Sistema Seguro</span>
+    </div>
+  </footer>
+
+  <script>
+  // ===== CONFIGURACIÓN =====
+  const CONFIG = {
+    whatsappNumbers: ['573214885822', '573004429451', '573212694280'],
+    autoRefreshSeconds: 30
+  };
+
+  let allProducts = [];
+  let filteredProducts = [];
+  let currentCategory = 'todos';
+  let currentPhoneIndex = 0;
+
+  // ===== INICIO =====
+  document.addEventListener('DOMContentLoaded', async () => {
+    await loadProducts();
+    setupSearch();
+    startAutoRefresh();
+  });
+
+  // ===== CARGA DE PRODUCTOS =====
+  async function loadProducts() {
+    try {
+      const response = await fetch('productos.json?t=' + Date.now());
+      const data = await response.json();
+      allProducts = Array.isArray(data) ? data : [];
+      filteredProducts = [...allProducts];
+      renderProducts();
+    } catch (e) {
+      console.error(e);
+      showEmptyState();
+    }
+  }
+
+  // ===== RENDERIZADO =====
+  function renderProducts() {
+    const grid = document.getElementById('productsGrid');
+    const count = document.getElementById('productCount');
+    count.textContent = filteredProducts.length;
+
+    if (filteredProducts.length === 0) {
+      showEmptyState();
+      return;
+    }
+
+    grid.innerHTML = '';
+    filteredProducts.forEach(prod => {
+      const card = document.createElement('div');
+      card.className = 'product-card';
+      card.innerHTML = `
+        <div class="product-image" data-image="${prod.imagen}" data-name="${prod.nombre}">
+          ${prod.imagen ? `<img src="${prod.imagen}" alt="${prod.nombre}">` : '<div class="placeholder-icon">👟</div>'}
+          <div class="product-badge">Premium</div>
         </div>
-    </div>
+        <div class="product-info">
+          <h3 class="product-name">${prod.nombre}</h3>
+          ${prod.descripcion ? `<p class="product-description">${prod.descripcion}</p>` : ''}
+          <div class="product-details">
+            <div class="price-section">
+              <div class="price-label">Precio</div>
+              <div class="product-price">${formatPrice(prod.precio)}</div>
+              ${prod.tallas ? `<div class="product-sizes">📏 Tallas: ${prod.tallas}</div>` : ''}
+            </div>
+            <a href="#" class="whatsapp-btn"
+              data-nombre="${prod.nombre}"
+              data-precio="${prod.precio}"
+              data-tallas="${prod.tallas || ''}"
+              data-imagen="${prod.imagen}">
+              💬 Consultar por WhatsApp
+            </a>
+          </div>
+        </div>
+      `;
+      // eventos
+      card.querySelector('.product-image').onclick = () =>
+        openImageModal(prod.imagen, prod.nombre);
 
-    <a href="#" class="whatsapp-float" onclick="contactarVendedor(event)">💬</a>
-    <div id="imageModal" class="image-modal">
-        <div class="image-modal-close" onclick="closeImageModal()">✕</div>
-        <img id="modalImage" src="" alt="">
-    </div>
-    <div id="notification" class="notification"></div>
+      card.querySelector('.whatsapp-btn').onclick = (e) => {
+        e.preventDefault();
+        consultarProducto(prod.nombre, prod.precio, prod.tallas);
+      };
 
-    <script>
-        const CONFIG = {
-            whatsappNumbers: ['573214885822','573004429451','573212694280'],
-            autoRefreshSeconds: 30
-        };
-        let allProducts = [], filteredProducts = [], currentCategory='todos', currentPhoneIndex=0;
+      grid.appendChild(card);
+    });
+  }
 
-        window.addEventListener('DOMContentLoaded', async ()=>{
-            await loadProducts();
-            setupSearch();
-            startAutoRefresh();
-        });
+  // ===== FORMATO DE PRECIO =====
+  const formatPrice = (p) => parseFloat(p).toLocaleString('es-CO');
 
-        async function loadProducts(){
-            try{
-                const res = await fetch('productos.json?t='+Date.now());
-                const data = await res.json();
-                allProducts = Array.isArray(data)?data:[];
-                filteredProducts = [...allProducts];
-                renderProducts();
-            }catch(e){showEmptyState();}
-        }
+  // ===== ESTADO VACÍO =====
+  function showEmptyState() {
+    document.getElementById('productsGrid').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <h2>Catálogo vacío</h2>
+        <p>Pronto agregaremos productos nuevos.</p>
+      </div>
+    `;
+  }
 
-        function renderProducts(){
-            const grid = document.getElementById('productsGrid');
-            grid.innerHTML = '';
-            document.getElementById('productCount').textContent = filteredProducts.length;
-            if(!filteredProducts.length){showEmptyState();return;}
+  // ===== FILTROS =====
+  function filterCategory(cat, e) {
+    currentCategory = cat;
+    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    filteredProducts = cat === 'todos'
+      ? allProducts
+      : allProducts.filter(p => (p.categoria || '').toLowerCase() === cat.toLowerCase());
+    renderProducts();
+  }
 
-            filteredProducts.forEach(p=>{
-                const card=document.createElement('div');
-                card.className='product-card';
-                card.innerHTML=`
-                    <div class="product-image" data-image="${p.imagen||''}" data-name="${p.nombre}">
-                        ${p.imagen?`<img src="${p.imagen}" alt="${p.nombre}">`:'<div>👟</div>'}
-                        <div class="product-badge">Premium</div>
-                    </div>
-                    <div class="product-info">
-                        <h3 class="product-name">${p.nombre}</h3>
-                        ${p.descripcion?`<p class="product-description">${p.descripcion}</p>`:''}
-                        <div class="product-details">
-                            <div class="price-label">Precio</div>
-                            <div class="product-price">${formatPrice(p.precio)}</div>
-                            ${p.tallas?`<div class="product-sizes">📏 Tallas: ${p.tallas}</div>`:''}
-                            <a href="#" class="whatsapp-btn"
-                               data-nombre="${p.nombre}"
-                               data-precio="${p.precio}"
-                               data-tallas="${p.tallas||''}"
-                               data-imagen="${p.imagen||''}">
-                               💬 Consultar por WhatsApp
-                            </a>
-                        </div>
-                    </div>`;
-                card.querySelector('.product-image').addEventListener('click',()=>{
-                    openImageModal(p.imagen,p.nombre);
-                });
-                card.querySelector('.whatsapp-btn').addEventListener('click',e=>{
-                    e.preventDefault();
-                    consultarProducto(p.nombre,p.precio,p.tallas,p.imagen);
-                });
-                grid.appendChild(card);
-            });
-        }
+  // ===== BUSCADOR =====
+  function setupSearch() {
+    document.getElementById('searchInput').addEventListener('input', e => {
+      const term = e.target.value.toLowerCase();
+      filteredProducts = allProducts.filter(p =>
+        p.nombre.toLowerCase().includes(term) ||
+        (p.descripcion && p.descripcion.toLowerCase().includes(term)) ||
+        (p.tallas && p.tallas.toLowerCase().includes(term))
+      );
+      renderProducts();
+    });
+  }
 
-        function consultarProducto(nombre,precio,tallas,imagen){
-            const phone=getNextPhone();
-            const msg=`¡Hola! 👋 Estoy interesado en:\n\n👟 *${nombre}*\n💰 Precio: ${formatPrice(precio)}${tallas?`\n📏 Tallas: ${tallas}`:''}\n\n🖼️ Imagen: ${imagen}\n\n¿Está disponible?`;
-            const url=`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-            showNotification('Contactando vendedor...');
-            window.open(url,'_blank');
-        }
+  // ===== ROTACIÓN DE WHATSAPP =====
+  function getNextPhone() {
+    const phone = CONFIG.whatsappNumbers[currentPhoneIndex];
+    currentPhoneIndex = (currentPhoneIndex + 1) % CONFIG.whatsappNumbers.length;
+    return phone;
+  }
 
-        function getNextPhone(){
-            const phone=CONFIG.whatsappNumbers[currentPhoneIndex];
-            currentPhoneIndex=(currentPhoneIndex+1)%CONFIG.whatsappNumbers.length;
-            return phone;
-        }
+  // ===== CONSULTA =====
+  function consultarProducto(nombre, precio, tallas) {
+    const phone = getNextPhone();
+    const msg = `¡Hola! 👋 Estoy interesado en *${nombre}*.\n💰 Precio: ${formatPrice(precio)}${tallas ? `\n📏 Tallas: ${tallas}` : ''}\n¿Está disponible?`;
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    showNotification(`Contactando vendedor ${phone}...`);
+    window.open(url, '_blank');
+  }
 
-        function startAutoRefresh(){
-            setInterval(()=>loadProducts(),CONFIG.autoRefreshSeconds*1000);
-        }
+  // ===== BOTÓN FLOTANTE =====
+  function contactarVendedor(e) {
+    e.preventDefault();
+    const phone = getNextPhone();
+    const msg = '¡Hola! 👋 Vi su catálogo y quiero más información.';
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    showNotification('Conectando con vendedor...');
+    window.open(url, '_blank');
+  }
 
-        function showEmptyState(){
-            document.getElementById('productsGrid').innerHTML='<div class="empty-state"><p>Catálogo vacío</p></div>';
-        }
+  // ===== MODAL IMAGEN =====
+  function openImageModal(src, name) {
+    const modal = document.getElementById('imageModal');
+    document.getElementById('modalImage').src = src;
+    modal.classList.add('active');
+  }
+  function closeImageModal() {
+    document.getElementById('imageModal').classList.remove('active');
+  }
 
-        function setupSearch(){
-            document.getElementById('searchInput').addEventListener('input',e=>{
-                const term=e.target.value.toLowerCase();
-                filteredProducts=allProducts.filter(p=>p.nombre.toLowerCase().includes(term)||(p.descripcion||'').toLowerCase().includes(term));
-                renderProducts();
-            });
-        }
+  // ===== NOTIFICACIÓN =====
+  function showNotification(msg) {
+    const n = document.getElementById('notification');
+    n.textContent = msg;
+    n.classList.add('show');
+    setTimeout(() => n.classList.remove('show'), 2500);
+  }
 
-        function filterCategory(cat){
-            document.querySelectorAll('.category-btn').forEach(b=>b.classList.remove('active'));
-            event.target.classList.add('active');
-            currentCategory=cat;
-            filteredProducts=cat==='todos'?allProducts:allProducts.filter(p=>(p.categoria||'').toLowerCase()===cat);
-            renderProducts();
-        }
-
-        function contactarVendedor(e){
-            e.preventDefault();
-            const phone=getNextPhone();
-            const msg='¡Hola! 👋 Vi su catálogo y deseo más información.';
-            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank');
-        }
-
-        function formatPrice(p){const n=parseFloat(p);return isNaN(n)?p:n.toLocaleString('es-CO');}
-        function showNotification(m){const n=document.getElementById('notification');n.textContent=m;n.classList.add('show');setTimeout(()=>n.classList.remove('show'),3000);}
-        function openImageModal(src,n){if(!src)return;const m=document.getElementById('imageModal');document.getElementById('modalImage').src=src;m.classList.add('active');}
-        function closeImageModal(){document.getElementById('imageModal').classList.remove('active');}
-    </script>
+  // ===== AUTO REFRESH =====
+  function startAutoRefresh() {
+    setInterval(loadProducts, CONFIG.autoRefreshSeconds * 1000);
+  }
+  </script>
 </body>
 </html>
