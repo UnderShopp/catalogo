@@ -8,5 +8,16 @@
     "categoria": "zapatillas",
     "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_16.jpg",
     "fecha": "2025-11-12T22:37:18.579693+00:00"
+  },
+  {
+    "id": "producto_1763000058",
+    "nombre": "LV Skate",
+    "precio": "180000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_17.jpg",
+    "fecha": "2025-11-13T02:14:18.533977+00:00",
+    "agregado_por": "S"
   }
 ]
