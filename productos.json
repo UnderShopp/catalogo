@@ -30,5 +30,16 @@
     "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_18.jpg",
     "fecha": "2025-11-13T02:36:20.591389+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1763001579",
+    "nombre": "Valentino Blanca",
+    "precio": "150000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_5.jpg",
+    "fecha": "2025-11-13T02:39:39.876669+00:00",
+    "agregado_por": "S"
   }
 ]
