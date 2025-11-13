@@ -299,6 +299,7 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+            pointer-events: none;
         }
 
         .product-info {
@@ -502,8 +503,16 @@
             display: flex;
         }
 
-        .image-modal img {
+        .image-modal-content {
+            position: relative;
             max-width: 90%;
+            max-height: 90vh;
+        }
+
+        .image-modal img {
+            width: 100%;
+            height: 100%;
+            max-width: 90vw;
             max-height: 90vh;
             object-fit: contain;
             border-radius: 15px;
@@ -513,8 +522,8 @@
 
         .image-modal-close {
             position: absolute;
-            top: 30px;
-            right: 30px;
+            top: -50px;
+            right: -50px;
             width: 50px;
             height: 50px;
             background: var(--gold);
@@ -573,6 +582,11 @@
 
             .product-price {
                 font-size: 2.5rem;
+            }
+
+            .image-modal-close {
+                top: 10px;
+                right: 10px;
             }
         }
     </style>
@@ -642,9 +656,11 @@
         <span style="font-size: 2.5rem;">💬</span>
     </a>
 
-    <div id="imageModal" class="image-modal" onclick="closeImageModal()">
-        <div class="image-modal-close">✕</div>
-        <img id="modalImage" src="" alt="Producto ampliado">
+    <div id="imageModal" class="image-modal">
+        <div class="image-modal-content">
+            <div class="image-modal-close" onclick="closeImageModal()">✕</div>
+            <img id="modalImage" src="" alt="Producto ampliado">
+        </div>
     </div>
 
     <footer class="footer">
@@ -719,41 +735,69 @@
             }
             
             console.log('🎨 Renderizando productos...');
-            grid.innerHTML = filteredProducts.map((producto, index) => `
-                <div class="product-card">
-                    <div class="product-image" onclick="openImageModal('${producto.imagen || ''}', '${escapeHtml(producto.nombre)}')">
+            grid.innerHTML = '';
+            
+            filteredProducts.forEach((producto) => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                
+                card.innerHTML = `
+                    <div class="product-image" data-image="${producto.imagen || ''}" data-name="${producto.nombre}">
                         ${producto.imagen 
-                            ? `<img src="${producto.imagen}" alt="${escapeHtml(producto.nombre)}" onerror="this.parentElement.innerHTML='<div class=\\'placeholder-icon\\'>👟</div>'">`
+                            ? `<img src="${producto.imagen}" alt="${producto.nombre}">`
                             : '<div class="placeholder-icon">👟</div>'
                         }
                         <div class="product-badge">Premium</div>
                     </div>
                     <div class="product-info">
-                        <h3 class="product-name">${escapeHtml(producto.nombre)}</h3>
+                        <h3 class="product-name">${producto.nombre}</h3>
                         ${producto.descripcion 
-                            ? `<p class="product-description">${escapeHtml(producto.descripcion)}</p>` 
+                            ? `<p class="product-description">${producto.descripcion}</p>` 
                             : ''
                         }
                         <div class="product-details">
                             <div class="price-section">
                                 <div class="price-label">Precio</div>
-                                <div class="product-price">${formatPrice(producto.precio)}</div>
+                                <div class="product-price">$${formatPrice(producto.precio)}</div>
                                 ${producto.tallas 
                                     ? `<div class="product-sizes">
                                         <span>📏</span>
-                                        <span>Tallas: ${escapeHtml(producto.tallas)}</span>
+                                        <span>Tallas: ${producto.tallas}</span>
                                        </div>` 
                                     : ''
                                 }
                             </div>
-                            <button class="whatsapp-btn" onclick="consultarProducto(event, '${escapeHtml(producto.nombre).replace(/'/g, "\\'")}', '${producto.precio}', '${escapeHtml(producto.tallas || '').replace(/'/g, "\\'")}')">
+                            <button class="whatsapp-btn" data-nombre="${producto.nombre}" data-precio="${producto.precio}" data-tallas="${producto.tallas || ''}">
                                 <span>💬</span>
                                 <span>Consultar por WhatsApp</span>
                             </button>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+                
+                // Event listener para ampliar imagen
+                const imageDiv = card.querySelector('.product-image');
+                imageDiv.addEventListener('click', function() {
+                    const imgSrc = this.getAttribute('data-image');
+                    const imgName = this.getAttribute('data-name');
+                    if (imgSrc) {
+                        openImageModal(imgSrc, imgName);
+                    }
+                });
+                
+                // Event listener para WhatsApp
+                const whatsappBtn = card.querySelector('.whatsapp-btn');
+                whatsappBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const nombre = this.getAttribute('data-nombre');
+                    const precio = this.getAttribute('data-precio');
+                    const tallas = this.getAttribute('data-tallas');
+                    consultarProducto(nombre, precio, tallas);
+                });
+                
+                grid.appendChild(card);
+            });
         }
 
         function formatPrice(price) {
@@ -836,11 +880,10 @@
             return phone;
         }
 
-        function consultarProducto(event, nombre, precio, tallas) {
-            event.preventDefault();
+        function consultarProducto(nombre, precio, tallas) {
             const phone = getNextPhone();
             const precioFormateado = formatPrice(precio);
-            const mensaje = `¡Hola! 👋 Estoy interesado en:\n\n👟 *${nombre}*\n💰 Precio: $${precioFormateado}\n${tallas ? `📏 Tallas: ${tallas}\n` : ''}\n¿Está disponible?`;
+            const mensaje = `¡Hola! 👋 Estoy interesado en:\n\n👟 *${nombre}*\n💰 Precio: ${precioFormateado}\n${tallas ? `📏 Tallas: ${tallas}\n` : ''}\n¿Está disponible?`;
             window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(mensaje)}`, '_blank');
         }
 
@@ -849,12 +892,6 @@
             const phone = getNextPhone();
             const mensaje = '¡Hola! 👋 Vi su catálogo de zapatos y me gustaría recibir más información.';
             window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(mensaje)}`, '_blank');
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
         }
 
         function openImageModal(imageSrc, productName) {
@@ -873,6 +910,14 @@
             document.body.style.overflow = 'auto';
         }
 
+        // Cerrar modal con click en el fondo oscuro
+        document.getElementById('imageModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeImageModal();
+            }
+        });
+
+        // Cerrar modal con tecla ESC
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closeImageModal();
