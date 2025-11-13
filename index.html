@@ -803,10 +803,7 @@
                                     : ''
                                 }
                             </div>
-                            <button class="whatsapp-btn" data-nombre="${producto.nombre}" data-precio="${producto.precio}" data-tallas="${producto.tallas || ''}">
-                                <span>💬</span>
-                                <span>Consultar por WhatsApp</span>
-                            </button>
+
                         </div>
                     </div>
                 `;
@@ -819,17 +816,6 @@
                     if (imgSrc) {
                         openImageModal(imgSrc, imgName);
                     }
-                });
-                
-                // Agregar event listener para el botón de WhatsApp
-                const whatsappBtn = card.querySelector('.whatsapp-btn');
-                whatsappBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const nombre = this.getAttribute('data-nombre');
-                    const precio = this.getAttribute('data-precio');
-                    const tallas = this.getAttribute('data-tallas');
-                    consultarProducto(nombre, precio, tallas);
                 });
                 
                 grid.appendChild(card);
