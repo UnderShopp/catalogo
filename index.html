@@ -606,7 +606,7 @@
         let allProducts = [];
         let filteredProducts = [];
         let currentCategory = 'todos';
-        let currentPhoneIndex = 0; // Índice para rotación secuencial
+        let currentPhoneIndex = 0;
 
         window.addEventListener('DOMContentLoaded', async () => {
             console.log('🚀 Cargando productos...');
@@ -681,10 +681,10 @@
                                     : ''
                                 }
                             </div>
-                            <a href="#" class="whatsapp-btn" onclick="consultarProducto(event, '${escapeHtml(producto.nombre)}', '${producto.precio}', '${escapeHtml(producto.tallas || '')}')">
+                            <button class="whatsapp-btn" onclick="consultarProducto(event, '${escapeHtml(producto.nombre)}', '${producto.precio}', '${escapeHtml(producto.tallas || '')}')">
                                 <span>💬</span>
                                 <span>Consultar por WhatsApp</span>
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -738,13 +738,11 @@
             console.log('🔍 Filtrando por:', category);
             currentCategory = category;
             
-            // Actualizar botones activos
             document.querySelectorAll('.category-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
             event.target.classList.add('active');
             
-            // Filtrar productos
             if (category === 'todos') {
                 filteredProducts = [...allProducts];
             } else {
@@ -753,7 +751,6 @@
                 );
             }
             
-            // Limpiar búsqueda
             document.getElementById('searchInput').value = '';
             
             console.log(`✅ ${filteredProducts.length} productos en categoría ${category}`);
@@ -767,7 +764,6 @@
             }, CONFIG.autoRefreshSeconds * 1000);
         }
 
-        // ROTACIÓN SECUENCIAL DE NÚMEROS
         function getNextPhone() {
             const phone = CONFIG.whatsappNumbers[currentPhoneIndex];
             currentPhoneIndex = (currentPhoneIndex + 1) % CONFIG.whatsappNumbers.length;
@@ -777,7 +773,7 @@
 
         function consultarProducto(event, nombre, precio, tallas) {
             event.preventDefault();
-            const phone = getNextPhone(); // Rotación secuencial
+            const phone = getNextPhone();
             const precioFormateado = formatPrice(precio);
             const mensaje = `¡Hola! 👋 Estoy interesado en:\n\n👟 *${nombre}*\n💰 Precio: $${precioFormateado}\n${tallas ? `📏 Tallas: ${tallas}\n` : ''}\n¿Está disponible?`;
             window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(mensaje)}`, '_blank');
@@ -785,7 +781,7 @@
 
         function contactarVendedor(event) {
             event.preventDefault();
-            const phone = getNextPhone(); // Rotación secuencial
+            const phone = getNextPhone();
             const mensaje = '¡Hola! 👋 Vi su catálogo de zapatos y me gustaría recibir más información.';
             window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(mensaje)}`, '_blank');
         }
