@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>👟 Under Shopp - Catálogo Premium</title>
+  <title>Under Shopp - Catálogo Premium</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E👟%3C/text%3E%3C/svg%3E">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
  <style>
@@ -552,7 +552,7 @@
   // ===== CONSULTA =====
   function consultarProducto(nombre, precio, tallas) {
     const phone = getNextPhone();
-    const msg = `¡Hola! 👋 Estoy interesado en *${nombre}*.\n💰 Precio: ${formatPrice(precio)}${tallas ? `\n📏 Tallas: ${tallas}` : ''}\n¿Está disponible?`;
+    const msg = `¡Hola! Estoy interesado en *${nombre}*.\n Precio: ${formatPrice(precio)}${tallas ? `\n Tallas: ${tallas}` : ''}\n¿Está disponible?`;
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
     showNotification(`Contactando vendedor ${phone}...`);
     window.open(url, '_blank');
@@ -562,7 +562,7 @@
   function contactarVendedor(e) {
     e.preventDefault();
     const phone = getNextPhone();
-    const msg = '¡Hola! 👋 Vi su catálogo y quiero más información.';
+    const msg = '¡Hola! Vi su catálogo y quiero más información.';
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
     showNotification('Conectando con vendedor...');
     window.open(url, '_blank');
