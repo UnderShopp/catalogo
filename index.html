@@ -589,6 +589,35 @@
                 right: 10px;
             }
         }
+
+        .notification {
+            position: fixed;
+            top: 100px;
+            right: 30px;
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(37, 211, 102, 0.4);
+            z-index: 10001;
+            animation: slideIn 0.3s ease;
+            display: none;
+        }
+
+        .notification.show {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
@@ -663,6 +692,8 @@
         </div>
     </div>
 
+    <div id="notification" class="notification"></div>
+
     <footer class="footer">
         <div class="footer-content">
             <p>Catálogo administrado vía Telegram Bot</p>
@@ -675,33 +706,37 @@
     </footer>
 
     <script>
+        // ========== CONFIGURACIÓN ==========
         const CONFIG = {
+            // Array de números de WhatsApp (sin espacios, con código de país)
             whatsappNumbers: [
-                '+573214885822',
-                '+573004429451',
-                '+573212694280'
+                '573214885822',
+                '573004429451',
+                '573212694280'
             ],
             autoRefreshSeconds: 30
         };
 
+        // ========== VARIABLES GLOBALES ==========
         let allProducts = [];
         let filteredProducts = [];
         let currentCategory = 'todos';
         let currentPhoneIndex = 0;
 
+        // ========== INICIALIZACIÓN ==========
         window.addEventListener('DOMContentLoaded', async () => {
-            console.log('🚀 Cargando productos...');
+            console.log('🚀 Iniciando Under Shopp...');
             await loadProducts();
             setupSearch();
             startAutoRefresh();
+            testWhatsAppRotation();
         });
 
+        // ========== CARGA DE PRODUCTOS ==========
         async function loadProducts() {
             try {
-                console.log('📡 Fetch productos.json...');
+                console.log('📡 Cargando productos desde productos.json...');
                 const response = await fetch('productos.json?t=' + Date.now());
-                
-                console.log('📊 Response status:', response.status);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -713,7 +748,7 @@
                 allProducts = Array.isArray(data) ? data : [];
                 filteredProducts = [...allProducts];
                 
-                console.log(`✅ ${allProducts.length} productos cargados`);
+                console.log(`✅ ${allProducts.length} productos cargados exitosamente`);
                 renderProducts();
         
             } catch (error) {
@@ -722,6 +757,7 @@
             }
         }
 
+        // ========== RENDERIZADO DE PRODUCTOS ==========
         function renderProducts() {
             const grid = document.getElementById('productsGrid');
             const productCount = document.getElementById('productCount');
@@ -734,15 +770,15 @@
                 return;
             }
             
-            console.log('🎨 Renderizando productos...');
+            console.log(`🎨 Renderizando ${filteredProducts.length} productos...`);
             grid.innerHTML = '';
             
-            filteredProducts.forEach((producto) => {
+            filteredProducts.forEach((producto, index) => {
                 const card = document.createElement('div');
                 card.className = 'product-card';
                 
                 card.innerHTML = `
-                    <div class="product-image" data-image="${producto.imagen || ''}" data-name="${producto.nombre}">
+                    <div class="product-image" onclick="openImageModal('${producto.imagen || ''}', '${producto.nombre}')">
                         ${producto.imagen 
                             ? `<img src="${producto.imagen}" alt="${producto.nombre}">`
                             : '<div class="placeholder-icon">👟</div>'
@@ -767,7 +803,7 @@
                                     : ''
                                 }
                             </div>
-                            <button class="whatsapp-btn" data-nombre="${producto.nombre}" data-precio="${producto.precio}" data-tallas="${producto.tallas || ''}">
+                            <button class="whatsapp-btn" onclick="consultarProducto('${escapeQuotes(producto.nombre)}', '${producto.precio}', '${producto.tallas || ''}')">
                                 <span>💬</span>
                                 <span>Consultar por WhatsApp</span>
                             </button>
@@ -775,31 +811,13 @@
                     </div>
                 `;
                 
-                // Event listener para ampliar imagen
-                const imageDiv = card.querySelector('.product-image');
-                imageDiv.addEventListener('click', function() {
-                    const imgSrc = this.getAttribute('data-image');
-                    const imgName = this.getAttribute('data-name');
-                    if (imgSrc) {
-                        openImageModal(imgSrc, imgName);
-                    }
-                });
-                
-                // Event listener para WhatsApp
-                const whatsappBtn = card.querySelector('.whatsapp-btn');
-                whatsappBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const nombre = this.getAttribute('data-nombre');
-                    const precio = this.getAttribute('data-precio');
-                    const tallas = this.getAttribute('data-tallas');
-                    consultarProducto(nombre, precio, tallas);
-                });
-                
                 grid.appendChild(card);
             });
+            
+            console.log('✅ Productos renderizados correctamente');
         }
 
+        // ========== UTILIDADES ==========
         function formatPrice(price) {
             const num = parseFloat(price);
             if (isNaN(num)) return price;
@@ -807,6 +825,10 @@
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
             });
+        }
+
+        function escapeQuotes(str) {
+            return str.replace(/'/g, "\\'").replace(/"/g, "&quot;");
         }
 
         function showEmptyState() {
@@ -821,6 +843,7 @@
             document.getElementById('productCount').textContent = '0';
         }
 
+        // ========== BÚSQUEDA ==========
         function setupSearch() {
             const searchInput = document.getElementById('searchInput');
             searchInput.addEventListener('input', (e) => {
@@ -843,8 +866,9 @@
             });
         }
 
+        // ========== FILTROS POR CATEGORÍA ==========
         function filterCategory(category) {
-            console.log('🔍 Filtrando por:', category);
+            console.log('🔍 Filtrando por categoría:', category);
             currentCategory = category;
             
             document.querySelectorAll('.category-btn').forEach(btn => {
@@ -866,38 +890,111 @@
             renderProducts();
         }
 
+        // ========== AUTO-REFRESH ==========
         function startAutoRefresh() {
             setInterval(() => {
-                console.log('🔄 Auto-refresh...');
+                console.log('🔄 Auto-refresh del catálogo...');
                 loadProducts();
             }, CONFIG.autoRefreshSeconds * 1000);
         }
 
+        // ========== ROTACIÓN DE NÚMEROS DE WHATSAPP ==========
         function getNextPhone() {
             const phone = CONFIG.whatsappNumbers[currentPhoneIndex];
+            const displayIndex = currentPhoneIndex + 1;
+            
+            console.log(`📞 Usando número ${displayIndex}/${CONFIG.whatsappNumbers.length}: ${phone}`);
+            
+            // Rotar al siguiente número
             currentPhoneIndex = (currentPhoneIndex + 1) % CONFIG.whatsappNumbers.length;
-            console.log(`📞 Usando número ${currentPhoneIndex}/${CONFIG.whatsappNumbers.length}: ${phone}`);
+            
             return phone;
         }
 
-        function consultarProducto(nombre, precio, tallas) {
-            const phone = getNextPhone();
-            const precioFormateado = formatPrice(precio);
-            const mensaje = `¡Hola! 👋 Estoy interesado en:\n\n👟 *${nombre}*\n💰 Precio: ${precioFormateado}\n${tallas ? `📏 Tallas: ${tallas}\n` : ''}\n¿Está disponible?`;
-            window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(mensaje)}`, '_blank');
+        // ========== TEST DE ROTACIÓN ==========
+        function testWhatsAppRotation() {
+            console.log('🧪 Probando rotación de números:');
+            const testResults = [];
+            for (let i = 0; i < CONFIG.whatsappNumbers.length + 2; i++) {
+                const phone = getNextPhone();
+                testResults.push(phone);
+            }
+            console.log('Secuencia de rotación:', testResults);
         }
 
+        // ========== FUNCIÓN PRINCIPAL: CONSULTAR PRODUCTO ==========
+        function consultarProducto(nombre, precio, tallas) {
+            // Obtener el siguiente número en rotación
+            const phone = getNextPhone();
+            
+            // Formatear el precio
+            const precioFormateado = formatPrice(precio);
+            
+            // Construir el mensaje de WhatsApp
+            const mensaje = `¡Hola! 👋 Estoy interesado en:
+
+👟 *${nombre}*
+💰 Precio: ${precioFormateado}${tallas ? `
+📏 Tallas: ${tallas}` : ''}
+
+¿Está disponible?`;
+            
+            // URL de WhatsApp (sin el símbolo +)
+            const whatsappURL = `https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`;
+            
+            // Log para debugging
+            console.log('📱 Abriendo WhatsApp:');
+            console.log('  - Número:', phone);
+            console.log('  - Producto:', nombre);
+            console.log('  - URL:', whatsappURL);
+            
+            // Mostrar notificación
+            showNotification(`Contactando vendedor ${currentPhoneIndex === 0 ? CONFIG.whatsappNumbers.length : currentPhoneIndex}...`);
+            
+            // Abrir WhatsApp en nueva pestaña
+            window.open(whatsappURL, '_blank');
+        }
+
+        // ========== CONTACTO GENERAL (BOTÓN FLOTANTE) ==========
         function contactarVendedor(event) {
             event.preventDefault();
+            
+            // Obtener el siguiente número en rotación
             const phone = getNextPhone();
+            
+            // Mensaje general
             const mensaje = '¡Hola! 👋 Vi su catálogo de zapatos y me gustaría recibir más información.';
-            window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(mensaje)}`, '_blank');
+            
+            // URL de WhatsApp
+            const whatsappURL = `https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`;
+            
+            console.log('📱 Contacto general a:', phone);
+            
+            // Mostrar notificación
+            showNotification(`Conectando con vendedor...`);
+            
+            // Abrir WhatsApp
+            window.open(whatsappURL, '_blank');
         }
 
+        // ========== NOTIFICACIONES ==========
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // ========== MODAL DE IMAGEN ==========
         function openImageModal(imageSrc, productName) {
             if (!imageSrc) return;
+            
             const modal = document.getElementById('imageModal');
             const modalImage = document.getElementById('modalImage');
+            
             modalImage.src = imageSrc;
             modalImage.alt = productName;
             modal.classList.add('active');
@@ -910,7 +1007,7 @@
             document.body.style.overflow = 'auto';
         }
 
-        // Cerrar modal con click en el fondo oscuro
+        // Cerrar modal con click en el fondo
         document.getElementById('imageModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeImageModal();
@@ -923,6 +1020,11 @@
                 closeImageModal();
             }
         });
+
+        // ========== LOG DE INICIO ==========
+        console.log('🎯 Under Shopp iniciado correctamente');
+        console.log('📞 Números configurados:', CONFIG.whatsappNumbers.length);
+        console.log('🔄 Auto-refresh:', CONFIG.autoRefreshSeconds, 'segundos');
     </script>
 </body>
 </html>
