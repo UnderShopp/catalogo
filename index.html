@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Under Shopp - Catálogo Premium</title>
+    <title>👟 Under Shopp - Catálogo Premium</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E👟%3C/text%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -483,7 +484,7 @@
             margin-top: 1rem;
         }
 
-                    @media (max-width: 768px) {
+        @media (max-width: 768px) {
             .header-content {
                 padding: 1.5rem;
             }
@@ -605,6 +606,7 @@
         let allProducts = [];
         let filteredProducts = [];
         let currentCategory = 'todos';
+        let currentPhoneIndex = 0; // Índice para rotación secuencial
 
         window.addEventListener('DOMContentLoaded', async () => {
             console.log('🚀 Cargando productos...');
@@ -765,13 +767,17 @@
             }, CONFIG.autoRefreshSeconds * 1000);
         }
 
-        function getRandomPhone() {
-            return CONFIG.whatsappNumbers[Math.floor(Math.random() * CONFIG.whatsappNumbers.length)];
+        // ROTACIÓN SECUENCIAL DE NÚMEROS
+        function getNextPhone() {
+            const phone = CONFIG.whatsappNumbers[currentPhoneIndex];
+            currentPhoneIndex = (currentPhoneIndex + 1) % CONFIG.whatsappNumbers.length;
+            console.log(`📞 Usando número ${currentPhoneIndex}/${CONFIG.whatsappNumbers.length}: ${phone}`);
+            return phone;
         }
 
         function consultarProducto(event, nombre, precio, tallas) {
             event.preventDefault();
-            const phone = getRandomPhone();
+            const phone = getNextPhone(); // Rotación secuencial
             const precioFormateado = formatPrice(precio);
             const mensaje = `¡Hola! 👋 Estoy interesado en:\n\n👟 *${nombre}*\n💰 Precio: $${precioFormateado}\n${tallas ? `📏 Tallas: ${tallas}\n` : ''}\n¿Está disponible?`;
             window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(mensaje)}`, '_blank');
@@ -779,7 +785,7 @@
 
         function contactarVendedor(event) {
             event.preventDefault();
-            const phone = getRandomPhone();
+            const phone = getNextPhone(); // Rotación secuencial
             const mensaje = '¡Hola! 👋 Vi su catálogo de zapatos y me gustaría recibir más información.';
             window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(mensaje)}`, '_blank');
         }
