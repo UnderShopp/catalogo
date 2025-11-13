@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     /* (todo el CSS igual que en tu versión) */
+    /* ... lo dejo igual, solo se actualiza JS */
   </style>
 </head>
 <body>
@@ -89,6 +90,7 @@
   </footer>
 
   <script>
+  // ===== CONFIGURACIÓN =====
   const CONFIG = {
     whatsappNumbers: ['573214885822', '573004429451', '573212694280'],
     autoRefreshSeconds: 30
@@ -99,12 +101,14 @@
   let currentCategory = 'todos';
   let currentPhoneIndex = 0;
 
+  // ===== INICIO =====
   document.addEventListener('DOMContentLoaded', async () => {
     await loadProducts();
     setupSearch();
     startAutoRefresh();
   });
 
+  // ===== CARGA DE PRODUCTOS =====
   async function loadProducts() {
     try {
       const response = await fetch('productos.json?t=' + Date.now());
@@ -118,6 +122,7 @@
     }
   }
 
+  // ===== RENDERIZADO =====
   function renderProducts() {
     const grid = document.getElementById('productsGrid');
     const count = document.getElementById('productCount');
@@ -134,7 +139,7 @@
       card.className = 'product-card';
       card.innerHTML = `
         <div class="product-image" data-image="${prod.imagen}" data-name="${prod.nombre}">
-          ${prod.imagen ? `<img src="${prod.imagen}" alt="${prod.nombre}">` : ''}
+          ${prod.imagen ? `<img src="${prod.imagen}" alt="${prod.nombre}">` : '<div class="placeholder-icon">👟</div>'}
           <div class="product-badge">Premium</div>
         </div>
         <div class="product-info">
@@ -156,17 +161,23 @@
           </div>
         </div>
       `;
-      card.querySelector('.product-image').onclick = () => openImageModal(prod.imagen, prod.nombre);
+      // eventos
+      card.querySelector('.product-image').onclick = () =>
+        openImageModal(prod.imagen, prod.nombre);
+
       card.querySelector('.whatsapp-btn').onclick = (e) => {
         e.preventDefault();
         consultarProducto(prod.nombre, prod.precio, prod.tallas);
       };
+
       grid.appendChild(card);
     });
   }
 
+  // ===== FORMATO DE PRECIO =====
   const formatPrice = (p) => parseFloat(p).toLocaleString('es-CO');
 
+  // ===== ESTADO VACÍO =====
   function showEmptyState() {
     document.getElementById('productsGrid').innerHTML = `
       <div class="empty-state">
@@ -177,6 +188,7 @@
     `;
   }
 
+  // ===== FILTROS =====
   function filterCategory(cat, e) {
     currentCategory = cat;
     document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
@@ -187,6 +199,7 @@
     renderProducts();
   }
 
+  // ===== BUSCADOR =====
   function setupSearch() {
     document.getElementById('searchInput').addEventListener('input', e => {
       const term = e.target.value.toLowerCase();
@@ -199,12 +212,14 @@
     });
   }
 
+  // ===== ROTACIÓN DE WHATSAPP =====
   function getNextPhone() {
     const phone = CONFIG.whatsappNumbers[currentPhoneIndex];
     currentPhoneIndex = (currentPhoneIndex + 1) % CONFIG.whatsappNumbers.length;
     return phone;
   }
 
+  // ===== CONSULTA =====
   function consultarProducto(nombre, precio, tallas) {
     const phone = getNextPhone();
     const msg = `¡Hola! 👋 Estoy interesado en *${nombre}*.\n💰 Precio: ${formatPrice(precio)}${tallas ? `\n📏 Tallas: ${tallas}` : ''}\n¿Está disponible?`;
@@ -213,6 +228,7 @@
     window.open(url, '_blank');
   }
 
+  // ===== BOTÓN FLOTANTE =====
   function contactarVendedor(e) {
     e.preventDefault();
     const phone = getNextPhone();
@@ -222,16 +238,17 @@
     window.open(url, '_blank');
   }
 
+  // ===== MODAL IMAGEN =====
   function openImageModal(src, name) {
     const modal = document.getElementById('imageModal');
     document.getElementById('modalImage').src = src;
     modal.classList.add('active');
   }
-
   function closeImageModal() {
     document.getElementById('imageModal').classList.remove('active');
   }
 
+  // ===== NOTIFICACIÓN =====
   function showNotification(msg) {
     const n = document.getElementById('notification');
     n.textContent = msg;
@@ -239,9 +256,11 @@
     setTimeout(() => n.classList.remove('show'), 2500);
   }
 
+  // ===== AUTO REFRESH =====
   function startAutoRefresh() {
     setInterval(loadProducts, CONFIG.autoRefreshSeconds * 1000);
   }
   </script>
 </body>
 </html>
+
