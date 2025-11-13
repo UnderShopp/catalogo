@@ -666,9 +666,6 @@ def main():
             print(f"   • {var}")
         return
     
-    # Servidor HTTP en thread separado
-    threading.Thread(target=start_health_server, daemon=True).start()
-    
     # Cargar productos
     ensure_repo()
     global productos_db
@@ -733,12 +730,37 @@ def main():
     app.add_handler(conv_agregar)
     app.add_handler(conv_editar)
     
-    print("🤖 Bot iniciado (modo polling)")
+    print("🤖 Bot iniciado")
     print(f"👥 Administradores: {ADMIN_IDS}")
     print(f"📁 Repositorio: {GITHUB_USER}/{GITHUB_REPO}")
-    print(f"📦 Productos cargados: {len(productos_db)}\n")
+    print(f"📦 Productos cargados: {len(productos_db)}")
     
-    app.run_polling(drop_pending_updates=True)
+    # Usar webhook en Render, polling en local
+    RENDER_EXTERNAL_URL = os.getenv('RENDER_EXTERNAL_URL')
+    PORT = int(os.getenv('PORT', 10000))
+    
+    if RENDER_EXTERNAL_URL:
+        # Modo WEBHOOK (Render)
+        print(f"🌐 Modo WEBHOOK en {RENDER_EXTERNAL_URL}")
+        
+        # Iniciar servidor HTTP en thread separado
+        threading.Thread(target=start_health_server, daemon=True).start()
+        
+        # Configurar webhook
+        webhook_url = f"{RENDER_EXTERNAL_URL}/{BOT_TOKEN}"
+        print(f"🔗 Webhook URL: {webhook_url}")
+        
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=PORT,
+            url_path=BOT_TOKEN,
+            webhook_url=webhook_url,
+            drop_pending_updates=True
+        )
+    else:
+        # Modo POLLING (desarrollo local)
+        print("🔄 Modo POLLING (desarrollo local)\n")
+        app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
