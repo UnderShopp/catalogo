@@ -85,5 +85,16 @@
     "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_22.jpg",
     "fecha": "2025-11-14T00:34:20.056953+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1763080507",
+    "nombre": "Pantalón Baggy Negro",
+    "precio": "120000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "ropa",
+    "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_23.jpg",
+    "fecha": "2025-11-14T00:35:07.541709+00:00",
+    "agregado_por": "S"
   }
 ]
