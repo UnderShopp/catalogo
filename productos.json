@@ -85,5 +85,16 @@
     "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_24.jpg",
     "fecha": "2025-11-14T00:37:02.539686+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1763081115",
+    "nombre": "Lv Skate Negra Perlas",
+    "precio": "480000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_26.jpg",
+    "fecha": "2025-11-14T00:45:15.984716+00:00",
+    "agregado_por": "S"
   }
 ]
