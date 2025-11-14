@@ -96,5 +96,16 @@
     "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_26.jpg",
     "fecha": "2025-11-14T00:45:15.984716+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1763081167",
+    "nombre": "Lv Trainer Oscura Hilo",
+    "precio": "200000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_27.jpg",
+    "fecha": "2025-11-14T00:46:07.172213+00:00",
+    "agregado_por": "S"
   }
 ]
