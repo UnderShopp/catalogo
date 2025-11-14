@@ -107,5 +107,16 @@
     "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_27.jpg",
     "fecha": "2025-11-14T00:46:07.172213+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1763081215",
+    "nombre": "Lv Skate Negra Blanca",
+    "precio": "180000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_28.jpg",
+    "fecha": "2025-11-14T00:46:55.726007+00:00",
+    "agregado_por": "S"
   }
 ]
