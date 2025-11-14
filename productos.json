@@ -129,5 +129,16 @@
     "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_29.jpg",
     "fecha": "2025-11-14T00:47:49.678355+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1763081330",
+    "nombre": "Lv Trainer Gris Claro",
+    "precio": "200000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_30.jpg",
+    "fecha": "2025-11-14T00:48:50.217132+00:00",
+    "agregado_por": "S"
   }
 ]
