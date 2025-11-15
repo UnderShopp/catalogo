@@ -206,5 +206,16 @@
     "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_36.jpg",
     "fecha": "2025-11-15T17:03:07.016018+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1763226220",
+    "nombre": "Nike Air Forcé 1 Bota",
+    "precio": "140000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_37.jpg",
+    "fecha": "2025-11-15T17:03:40.933015+00:00",
+    "agregado_por": "S"
   }
 ]
