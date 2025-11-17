@@ -339,6 +339,39 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+   /* Responsive: 2 columnas en móviles */
+    @media (max-width: 768px) {
+      .products-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        padding: 0 0.5rem;
+      }
+
+      .product-card {
+        border-radius: 12px;
+      }
+
+      .product-image {
+        height: 200px;
+      }
+
+      .product-info {
+        padding: 0.8rem;
+      }
+
+      .product-name {
+        font-size: 0.95rem;
+      }
+
+      .product-description {
+        font-size: 0.8rem;
+      }
+
+      .whatsapp-btn {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.8rem;
+      }
+    }
   </style>
 </head>
 <body>
