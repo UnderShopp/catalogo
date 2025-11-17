@@ -3,3 +3,5 @@ GitPython==3.1.43
 httpx==0.28.1
 certifi
 anyio
+python-telegram-bot>=20.0
+requests
