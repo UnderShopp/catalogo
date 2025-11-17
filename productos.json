@@ -77,7 +77,7 @@
   },
   {
     "id": "producto_1763080622",
-    "nombre": "Lv Trainer Negra",
+    "nombre": "Lv TSkate Negra",
     "precio": "200000",
     "descripcion": "",
     "tallas": "",
@@ -99,7 +99,7 @@
   },
   {
     "id": "producto_1763081167",
-    "nombre": "Lv Trainer Oscura Hilo",
+    "nombre": "Lv TSkate Oscura Hilo",
     "precio": "200000",
     "descripcion": "",
     "tallas": "",
@@ -115,7 +115,7 @@
     "descripcion": "",
     "tallas": "",
     "categoria": "zapatillas",
-    "imagen": "https://api.telegram.org/file/bot8554072695:AAFNA3pvOhXfpblThCexTgJP_owmdk4BBsg/photos/file_28.jpg",
+    "imagen": "https://ibb.co/p6sK64ND,
     "fecha": "2025-11-14T00:46:55.726007+00:00",
     "agregado_por": "S"
   },
