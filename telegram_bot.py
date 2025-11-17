@@ -561,11 +561,47 @@ async def recibir_categoria(update, context):
 
 async def recibir_imagen(update, context):
     img_url = ""
+    
     if update.message.photo:
-        file = await update.message.photo[-1].get_file()
-        img_url = file.file_path
+        try:
+            # Descargar la foto de Telegram
+            file = await update.message.photo[-1].get_file()
+            foto_bytes = await file.download_as_bytearray()
+            
+            # Subir a ImgBB
+            IMGBB_API_KEY = os.getenv("IMGBB_API_KEY")
+            if IMGBB_API_KEY:
+                import base64
+                import requests
+                
+                # Convertir a base64
+                foto_b64 = base64.b64encode(foto_bytes).decode('utf-8')
+                
+                # Subir a ImgBB
+                response = requests.post(
+                    "https://api.imgbb.com/1/upload",
+                    data={
+                        "key": IMGBB_API_KEY,
+                        "image": foto_b64
+                    }
+                )
+                
+                if response.status_code == 200:
+                    img_url = response.json()['data']['url']
+                    print(f"✅ Imagen subida: {img_url}")
+                else:
+                    print(f"⚠️ Error subiendo imagen: {response.text}")
+                    img_url = ""
+            else:
+                print("⚠️ IMGBB_API_KEY no configurada")
+                img_url = ""
+                
+        except Exception as e:
+            print(f"❌ Error procesando imagen: {e}")
+            img_url = ""
     else:
         img_url = update.message.text.strip() if update.message.text else ""
+    
     context.user_data['imagen'] = img_url
     return await finalizar_producto(update, context)
 
