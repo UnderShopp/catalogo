@@ -244,5 +244,21 @@
     "videos": [],
     "fecha": "2025-11-22T04:58:21.226076+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1763787580",
+    "nombre": "TN Camaleón",
+    "precio": "175000",
+    "descripcion": "Envío gratis 🚚",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://i.ibb.co/tTwPd3zd/img-jpg.jpg",
+    "imagenes": [
+      "https://i.ibb.co/84cVsJVF/producto-1763787043-jpg.jpg",
+      "https://i.ibb.co/35Y9kDjk/img-jpg.jpg"
+    ],
+    "videos": [],
+    "fecha": "2025-11-22T04:59:40.703304+00:00",
+    "agregado_por": "Nicolas"
   }
 ]
