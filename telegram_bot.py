@@ -1,11 +1,61 @@
+async def recibir_imagen(update, context):
+    img_url = ""
+    
+    if update.message.photo:
+        # Descargar la imagen de Telegram
+        photo = update.message.photo[-1]
+        file = await photo.get_file()
+        
+        # Si hay API key de ImgBB, subir ahí
+        if IMGBB_API_KEY:
+            try:
+                # Descargar bytes
+                file_bytes = await file.download_as_bytearray()
+                
+                # Subir a ImgBB
+                img_url = await subir_imagen_imgbb(file_bytes, f"producto_{int(datetime.now().timestamp())}.jpg")
+                
+                if not img_url:
+                    await update.message.reply_text("⚠️ No se pudo subir la imagen, continuando sin imagen...")
+                    img_url = ""
+            except Exception as e:
+                print(f"Error descargando/subiendo imagen: {e}")
+                await update.message.reply_text("⚠️ Error con la imagen, continuando sin imagen...")
+                img_url = ""
+        else:
+            # Sin ImgBB, usar URL de Telegram (no funcionará en web)
+            img_url = file.file_path
+            await update.message.reply_text(
+                "⚠️ *Imagen de Telegram detectada*\n\n"
+                "Para que las imágenes se vean en el catálogo web, necesitas:\n"
+                "1. Crear cuenta en imgbb.com (gratis)\n"
+                "2. Obtener tu API key\n"
+                "3. Agregar en Render: IMGBB_API_KEY=tu_key\n\n"
+                "Por ahora, el producto se guardará sin imagen visible.",
+                parse_mode="Markdown"
+            )
+            img_url = ""
+    else:
+        # Texto recibido en lugar de foto
+        texto = update.message.text.strip() if update.message.text else ""
+        if texto and texto.startswith("http"):
+            # Es una URL, guardarla directamente
+            img_url = texto
+        else:
+            img_url = ""
+    
+    context.user_data['imagen'] = img_url
+    return await finalizar_producto(update, context)#!/usr/bin/env python3
 #!/usr/bin/env python3
 import os
 import json
 import subprocess
+import base64
 from datetime import datetime, timezone
 from pathlib import Path
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes, ConversationHandler
+import httpx
 
 # CONFIGURACIÓN
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -20,6 +70,7 @@ if ADMIN_IDS_STR:
 GITHUB_USER = os.getenv("GITHUB_USER")
 GITHUB_REPO = os.getenv("GITHUB_REPO")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+IMGBB_API_KEY = os.getenv("IMGBB_API_KEY", "")  # API key de ImgBB (opcional)
 
 # Limpiar el nombre del repo si viene con usuario duplicado
 if GITHUB_REPO and "/" in GITHUB_REPO:
@@ -30,7 +81,35 @@ print(f"   BOT_TOKEN: {'✅' if BOT_TOKEN else '❌'}")
 print(f"   ADMIN_IDS: {ADMIN_IDS}")
 print(f"   GITHUB_USER: {GITHUB_USER}")
 print(f"   GITHUB_REPO: {GITHUB_REPO}")
-print(f"   GITHUB_TOKEN: {'✅' if GITHUB_TOKEN else '❌'}\n")
+print(f"   GITHUB_TOKEN: {'✅' if GITHUB_TOKEN else '❌'}")
+print(f"   IMGBB_API_KEY: {'✅' if IMGBB_API_KEY else '⚠️ (imágenes no públicas)'}\n")
+
+# CONFIGURACIÓN
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_IDS_STR = os.getenv("ADMIN_IDS", "")
+ADMIN_IDS = []
+if ADMIN_IDS_STR:
+    try:
+        ADMIN_IDS = [int(id.strip()) for id in ADMIN_IDS_STR.split(",") if id.strip()]
+    except ValueError:
+        print("Error parseando ADMIN_IDS")
+
+GITHUB_USER = os.getenv("GITHUB_USER")
+GITHUB_REPO = os.getenv("GITHUB_REPO")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+IMGBB_API_KEY = os.getenv("IMGBB_API_KEY", "")  # API key de ImgBB (opcional)
+
+# Limpiar el nombre del repo si viene con usuario duplicado
+if GITHUB_REPO and "/" in GITHUB_REPO:
+    GITHUB_REPO = GITHUB_REPO.split("/")[-1]
+
+print(f"\n🧩 CONFIGURACIÓN:")
+print(f"   BOT_TOKEN: {'✅' if BOT_TOKEN else '❌'}")
+print(f"   ADMIN_IDS: {ADMIN_IDS}")
+print(f"   GITHUB_USER: {GITHUB_USER}")
+print(f"   GITHUB_REPO: {GITHUB_REPO}")
+print(f"   GITHUB_TOKEN: {'✅' if GITHUB_TOKEN else '❌'}")
+print(f"   IMGBB_API_KEY: {'✅' if IMGBB_API_KEY else '⚠️ (opcional)'}\n")
 
 LOCAL_REPO_PATH = Path("/tmp/catalogo")
 JSON_FILENAME = "productos.json"
@@ -245,6 +324,46 @@ def format_precio(precio):
             return f"{precio_float:,.2f}"
     except:
         return str(precio)
+
+async def subir_imagen_imgbb(file_bytes, filename="producto.jpg"):
+    """Sube una imagen a ImgBB y retorna la URL pública"""
+    if not IMGBB_API_KEY:
+        print("⚠️ No hay IMGBB_API_KEY configurado")
+        return None
+    
+    try:
+        print("📤 Subiendo imagen a ImgBB...")
+        
+        # Convertir bytes a base64
+        image_base64 = base64.b64encode(file_bytes).decode('utf-8')
+        
+        # Hacer request a ImgBB
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                "https://api.imgbb.com/1/upload",
+                data={
+                    "key": IMGBB_API_KEY,
+                    "image": image_base64,
+                    "name": filename
+                }
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("success"):
+                    url = data["data"]["url"]
+                    print(f"✅ Imagen subida: {url}")
+                    return url
+                else:
+                    print(f"❌ Error en ImgBB: {data}")
+                    return None
+            else:
+                print(f"❌ Error HTTP {response.status_code}")
+                return None
+                
+    except Exception as e:
+        print(f"❌ Error subiendo imagen: {e}")
+        return None
 
 # SECURITY
 def es_admin(user_id):
@@ -666,11 +785,54 @@ async def recibir_categoria(update, context):
 
 async def recibir_imagen(update, context):
     img_url = ""
+    
     if update.message.photo:
-        file = await update.message.photo[-1].get_file()
-        img_url = file.file_path
+        # Descargar la imagen de Telegram
+        photo = update.message.photo[-1]
+        file = await photo.get_file()
+        
+        # Si hay API key de ImgBB, subir ahí
+        if IMGBB_API_KEY:
+            try:
+                await update.message.reply_text("📤 Subiendo imagen...")
+                
+                # Descargar bytes
+                file_bytes = await file.download_as_bytearray()
+                
+                # Subir a ImgBB
+                img_url = await subir_imagen_imgbb(file_bytes, f"producto_{int(datetime.now().timestamp())}.jpg")
+                
+                if img_url:
+                    await update.message.reply_text("✅ Imagen subida correctamente")
+                else:
+                    await update.message.reply_text("⚠️ No se pudo subir la imagen, continuando sin imagen...")
+                    img_url = ""
+            except Exception as e:
+                print(f"Error descargando/subiendo imagen: {e}")
+                await update.message.reply_text("⚠️ Error con la imagen, continuando sin imagen...")
+                img_url = ""
+        else:
+            # Sin ImgBB, informar al usuario
+            await update.message.reply_text(
+                "⚠️ *Imagen no se guardará*\n\n"
+                "Para que las imágenes se vean en el catálogo web:\n"
+                "1. Crea cuenta gratis en imgbb.com\n"
+                "2. Obtén tu API key en api.imgbb.com\n"
+                "3. Agrégala en Render: IMGBB_API_KEY\n\n"
+                "Producto se guardará sin imagen.",
+                parse_mode="Markdown"
+            )
+            img_url = ""
     else:
-        img_url = update.message.text.strip() if update.message.text else ""
+        # Texto recibido en lugar de foto
+        texto = update.message.text.strip() if update.message.text else ""
+        if texto and texto.startswith("http"):
+            # Es una URL, guardarla directamente
+            img_url = texto
+            await update.message.reply_text("✅ URL de imagen guardada")
+        else:
+            img_url = ""
+    
     context.user_data['imagen'] = img_url
     return await finalizar_producto(update, context)
 
