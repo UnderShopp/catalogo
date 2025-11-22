@@ -228,5 +228,16 @@
     "imagen": "https://i.ibb.co/rfwFSPJS/producto-1763784761-jpg.jpg",
     "fecha": "2025-11-22T04:12:42.840338+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1763786389",
+    "nombre": "Lv Skate Negra Perlada",
+    "precio": "250000",
+    "descripcion": "Envío Gratis 🚚",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://i.ibb.co/HfjrZc8p/producto-1763786387-jpg.jpg",
+    "fecha": "2025-11-22T04:39:49.078600+00:00",
+    "agregado_por": "S"
   }
 ]
