@@ -15,362 +15,79 @@
       --text: #fff;
       --text-muted: #aaa;
     }
-
-    * {
-      box-sizing: border-box;
-      scroll-behavior: smooth;
-    }
-
-    body {
-      margin: 0;
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      overflow-x: hidden;
-    }
-
-    header {
-      backdrop-filter: blur(12px);
-      background: rgba(20, 20, 20, 0.7);
-      border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .header-content {
-      max-width: 1200px;
-      margin: auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem 1.5rem;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-    }
-
-    .brand-icon {
-      font-size: 2rem;
-    }
-
-    .brand-text h1 {
-      margin: 0;
-      font-family: 'Playfair Display', serif;
-      font-size: 1.6rem;
-    }
-
-    .brand-text p {
-      margin: 0;
-      font-size: 0.9rem;
-      color: var(--text-muted);
-    }
-
-    .search-bar {
-      position: relative;
-    }
-
-    .search-input {
-      padding: 0.6rem 1rem;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.05);
-      color: var(--text);
-      outline: none;
-      width: 250px;
-      transition: 0.3s;
-    }
-
-    .search-input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 10px var(--accent);
-    }
-
-    .categories {
-      display: flex;
-      justify-content: center;
-      gap: 1rem;
-      padding: 1rem;
-      flex-wrap: wrap;
-    }
-
-    .category-btn {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 25px;
-      padding: 0.6rem 1.2rem;
-      cursor: pointer;
-      transition: 0.3s;
-      font-weight: 500;
-    }
-
-    .category-btn.active,
-    .category-btn:hover {
-      background: var(--accent);
-      color: #000;
-      box-shadow: 0 0 15px var(--accent);
-    }
-
-    .stats-bar {
-      display: flex;
-      justify-content: center;
-      gap: 3rem;
-      margin: 1.5rem 0;
-      text-align: center;
-      flex-wrap: wrap;
-    }
-
-    .stat-item {
-      color: var(--text);
-    }
-
-    .stat-icon {
-      font-size: 1.4rem;
-      display: block;
-    }
-
-    .products-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 2rem;
-      max-width: 1200px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-    }
-
-    .product-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      overflow: hidden;
-      backdrop-filter: blur(10px);
-      transition: transform .3s, box-shadow .3s;
-    }
-
-    .product-card:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 0 15px rgba(0,255,153,0.3);
-    }
-
-    .product-image {
-      position: relative;
-      width: 100%;
-      height: 280px;
-      overflow: hidden;
-    }
-
-    .product-image img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform .5s;
-    }
-
-    .product-card:hover img {
-      transform: scale(1.1);
-    }
-
-    .product-badge {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: var(--accent);
-      color: #000;
-      font-size: .8rem;
-      padding: .3rem .6rem;
-      border-radius: 10px;
-      font-weight: 600;
-    }
-
-    .product-info {
-      padding: 1rem 1.2rem;
-    }
-
-    .product-name {
-      margin: 0;
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-
-    .product-description {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      margin-top: 0.3rem;
-      line-height: 1.3rem;
-    }
-
-    .product-price {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--accent);
-      margin-top: 0.5rem;
-    }
-
-    .whatsapp-btn {
-      display: inline-block;
-      margin-top: 0.8rem;
-      background: linear-gradient(90deg, #25D366, #128C7E);
-      color: white;
-      text-decoration: none;
-      padding: 0.6rem 1rem;
-      border-radius: 12px;
-      transition: 0.3s;
-      font-weight: 500;
-    }
-
-    .whatsapp-btn:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 10px #25D366;
-    }
-
-    .footer {
-      text-align: center;
-      padding: 2rem 1rem;
-      color: var(--text-muted);
-      border-top: 1px solid var(--border);
-      margin-top: 2rem;
-    }
-
-    .footer-badge {
-      margin-top: 0.6rem;
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    .whatsapp-float {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: linear-gradient(90deg, #25D366, #128C7E);
-      border-radius: 50%;
-      width: 60px;
-      height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 2rem;
-      text-decoration: none;
-      box-shadow: 0 0 15px rgba(37,211,102,0.4);
-      transition: 0.3s;
-      z-index: 150;
-    }
-
-    .whatsapp-float:hover {
-      transform: scale(1.1);
-    }
-
-    .image-modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      justify-content: center;
-      align-items: center;
-      z-index: 200;
-      backdrop-filter: blur(8px);
-    }
-
-    .image-modal.active {
-      display: flex;
-    }
-
-    .image-modal-content {
-      max-width: 90%;
-      max-height: 90%;
-      position: relative;
-    }
-
-    .image-modal-content img {
-      width: 100%;
-      height: auto;
-      border-radius: 16px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
-    }
-
-    .image-modal-close {
-      position: absolute;
-      top: -40px;
-      right: 0;
-      color: white;
-      font-size: 2rem;
-      cursor: pointer;
-    }
-
-    .notification {
-      position: fixed;
-      bottom: 100px;
-      right: 20px;
-      background: rgba(255,255,255,0.1);
-      padding: 0.8rem 1.2rem;
-      border-radius: 12px;
-      backdrop-filter: blur(6px);
-      border: 1px solid var(--border);
-      opacity: 0;
-      transition: opacity 0.3s;
-      color: var(--text);
-      z-index: 300;
-    }
-
-    .notification.show {
-      opacity: 1;
-    }
-
-    .loading {
-      text-align: center;
-      color: var(--text-muted);
-      padding: 3rem;
-    }
-
-    .loading-spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      margin: auto;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-   /* Responsive: 2 columnas en móviles */
+    * { box-sizing: border-box; scroll-behavior: smooth; }
+    body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
+    header { backdrop-filter: blur(12px); background: rgba(20, 20, 20, 0.7); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .header-content { max-width: 1200px; margin: auto; display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; }
+    .brand { display: flex; align-items: center; gap: 0.6rem; }
+    .brand-icon { font-size: 2rem; }
+    .brand-text h1 { margin: 0; font-family: 'Playfair Display', serif; font-size: 1.6rem; }
+    .brand-text p { margin: 0; font-size: 0.9rem; color: var(--text-muted); }
+    .search-bar { position: relative; }
+    .search-input { padding: 0.6rem 1rem; border-radius: 20px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: var(--text); outline: none; width: 250px; transition: 0.3s; }
+    .search-input:focus { border-color: var(--accent); box-shadow: 0 0 10px var(--accent); }
+    .categories { display: flex; justify-content: center; gap: 1rem; padding: 1rem; flex-wrap: wrap; }
+    .category-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text); border-radius: 25px; padding: 0.6rem 1.2rem; cursor: pointer; transition: 0.3s; font-weight: 500; }
+    .category-btn.active, .category-btn:hover { background: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent); }
+    .stats-bar { display: flex; justify-content: center; gap: 3rem; margin: 1.5rem 0; text-align: center; flex-wrap: wrap; }
+    .stat-item { color: var(--text); }
+    .stat-icon { font-size: 1.4rem; display: block; }
+    .products-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2rem; max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+    .product-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; backdrop-filter: blur(10px); transition: transform .3s, box-shadow .3s; }
+    .product-card:hover { transform: translateY(-6px); box-shadow: 0 0 15px rgba(0,255,153,0.3); }
+    
+    /* CARRUSEL */
+    .product-carousel { position: relative; width: 100%; height: 280px; overflow: hidden; }
+    .carousel-track { display: flex; transition: transform 0.3s ease; height: 100%; }
+    .carousel-slide { min-width: 100%; height: 100%; }
+    .carousel-slide img, .carousel-slide video { width: 100%; height: 100%; object-fit: cover; }
+    .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1rem; z-index: 10; display: flex; align-items: center; justify-content: center; }
+    .carousel-btn:hover { background: var(--accent); color: #000; }
+    .carousel-btn.prev { left: 8px; }
+    .carousel-btn.next { right: 8px; }
+    .carousel-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 10; }
+    .carousel-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.4); cursor: pointer; transition: 0.3s; }
+    .carousel-dot.active { background: var(--accent); }
+    .media-count { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: #fff; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; z-index: 10; }
+    
+    .product-badge { position: absolute; top: 10px; left: 10px; background: var(--accent); color: #000; font-size: .8rem; padding: .3rem .6rem; border-radius: 10px; font-weight: 600; z-index: 10; }
+    .product-info { padding: 1rem 1.2rem; }
+    .product-name { margin: 0; font-size: 1.1rem; font-weight: 600; }
+    .product-description { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.3rem; line-height: 1.3rem; }
+    .product-price { font-size: 1rem; font-weight: 600; color: var(--accent); margin-top: 0.5rem; }
+    .whatsapp-btn { display: inline-block; margin-top: 0.8rem; background: linear-gradient(90deg, #25D366, #128C7E); color: white; text-decoration: none; padding: 0.6rem 1rem; border-radius: 12px; transition: 0.3s; font-weight: 500; }
+    .whatsapp-btn:hover { transform: scale(1.05); box-shadow: 0 0 10px #25D366; }
+    .footer { text-align: center; padding: 2rem 1rem; color: var(--text-muted); border-top: 1px solid var(--border); margin-top: 2rem; }
+    .footer-badge { margin-top: 0.6rem; color: var(--accent); font-weight: 600; }
+    .whatsapp-float { position: fixed; bottom: 20px; right: 20px; background: linear-gradient(90deg, #25D366, #128C7E); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem; text-decoration: none; box-shadow: 0 0 15px rgba(37,211,102,0.4); transition: 0.3s; z-index: 150; }
+    .whatsapp-float:hover { transform: scale(1.1); }
+    .image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 200; backdrop-filter: blur(8px); }
+    .image-modal.active { display: flex; }
+    .image-modal-content { max-width: 90%; max-height: 90%; position: relative; }
+    .image-modal-content img, .image-modal-content video { max-width: 100%; max-height: 85vh; border-radius: 16px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+    .image-modal-close { position: absolute; top: -40px; right: 0; color: white; font-size: 2rem; cursor: pointer; }
+    .modal-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); color: #fff; border: none; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; }
+    .modal-nav:hover { background: var(--accent); color: #000; }
+    .modal-nav.prev { left: -70px; }
+    .modal-nav.next { right: -70px; }
+    .notification { position: fixed; bottom: 100px; right: 20px; background: rgba(255,255,255,0.1); padding: 0.8rem 1.2rem; border-radius: 12px; backdrop-filter: blur(6px); border: 1px solid var(--border); opacity: 0; transition: opacity 0.3s; color: var(--text); z-index: 300; }
+    .notification.show { opacity: 1; }
+    .loading { text-align: center; color: var(--text-muted); padding: 3rem; }
+    .loading-spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--accent); border-radius: 50%; margin: auto; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty-state { grid-column: 1 / -1; text-align: center; padding: 3rem; }
+    .empty-icon { font-size: 4rem; }
     @media (max-width: 768px) {
-      .products-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-        padding: 0 0.5rem;
-      }
-
-      .product-card {
-        border-radius: 12px;
-      }
-
-      .product-image {
-        height: 200px;
-      }
-
-      .product-info {
-        padding: 0.8rem;
-      }
-
-      .product-name {
-        font-size: 0.95rem;
-      }
-
-      .product-description {
-        font-size: 0.8rem;
-      }
-
-      .whatsapp-btn {
-        font-size: 0.85rem;
-        padding: 0.5rem 0.8rem;
-      }
+      .products-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; padding: 0 0.5rem; }
+      .product-card { border-radius: 12px; }
+      .product-carousel { height: 200px; }
+      .product-info { padding: 0.8rem; }
+      .product-name { font-size: 0.95rem; }
+      .whatsapp-btn { font-size: 0.85rem; padding: 0.5rem 0.8rem; }
+      .carousel-btn { width: 28px; height: 28px; font-size: 0.8rem; }
+      .modal-nav { width: 40px; height: 40px; }
+      .modal-nav.prev { left: 10px; }
+      .modal-nav.next { right: 10px; }
     }
   </style>
 </head>
@@ -379,250 +96,171 @@
     <div class="header-content">
       <div class="brand">
         <div class="brand-icon"></div>
-        <div class="brand-text">
-          <h1>Under Shopp</h1>
-          <p>Calzado de Lujo</p>
-        </div>
+        <div class="brand-text"><h1>Under Shopp</h1><p>Calzado de Lujo</p></div>
       </div>
       <div class="search-bar">
         <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre, marca, estilo...">
-        <span class="search-icon">🔍</span>
       </div>
     </div>
   </header>
-
   <div class="categories">
     <button class="category-btn active" onclick="filterCategory('todos', event)">📦 Todos</button>
     <button class="category-btn" onclick="filterCategory('zapatillas', event)">👟 Zapatillas</button>
     <button class="category-btn" onclick="filterCategory('ropa', event)">👕 Ropa</button>
   </div>
-
   <div class="stats-bar">
-    <div class="stat-item">
-      <span class="stat-icon">📦</span>
-      <div class="stat-text">
-        <h3 id="productCount">0</h3>
-        <p>Productos</p>
-      </div>
-    </div>
-    <div class="stat-item">
-      <span class="stat-icon">⭐</span>
-      <div class="stat-text">
-        <h3>100%</h3>
-        <p>Calidad</p>
-      </div>
-    </div>
-    <div class="stat-item">
-      <span class="stat-icon">🚚</span>
-      <div class="stat-text">
-        <h3>24h</h3>
-        <p>Envío Rápido</p>
-      </div>
-    </div>
+    <div class="stat-item"><span class="stat-icon">📦</span><div class="stat-text"><h3 id="productCount">0</h3><p>Productos</p></div></div>
+    <div class="stat-item"><span class="stat-icon">⭐</span><div class="stat-text"><h3>100%</h3><p>Calidad</p></div></div>
+    <div class="stat-item"><span class="stat-icon">🚚</span><div class="stat-text"><h3>24h</h3><p>Envío Rápido</p></div></div>
   </div>
-
-  <div class="products-container">
-    <div id="productsGrid" class="products-grid">
-      <div class="loading">
-        <div class="loading-spinner"></div>
-        <p class="loading-text">Cargando catálogo...</p>
-      </div>
-    </div>
-  </div>
-
-  <a href="#" class="whatsapp-float" onclick="contactarVendedor(event)">
-    <span style="font-size: 2.5rem;">💬</span>
-  </a>
-
-  <!-- Modal de imagen -->
+  <div class="products-container"><div id="productsGrid" class="products-grid"><div class="loading"><div class="loading-spinner"></div><p>Cargando catálogo...</p></div></div></div>
+  <a href="#" class="whatsapp-float" onclick="contactarVendedor(event)"><span style="font-size:2.5rem;">💬</span></a>
   <div id="imageModal" class="image-modal">
     <div class="image-modal-content">
       <div class="image-modal-close" onclick="closeImageModal()">✕</div>
-      <img id="modalImage" src="" alt="Producto ampliado">
+      <button class="modal-nav prev" onclick="modalPrev()">‹</button>
+      <img id="modalImage" src="" alt="Producto">
+      <video id="modalVideo" src="" controls style="display:none;"></video>
+      <button class="modal-nav next" onclick="modalNext()">›</button>
     </div>
   </div>
-
   <div id="notification" class="notification"></div>
-
-  <footer class="footer">
-    <p>Catálogo administrado vía Telegram Bot</p>
-    <p style="margin-top: 0.5rem; font-size: 0.8rem;">Actualización automática en tiempo real</p>
-    <div class="footer-badge">
-      <span>🔒</span> <span>Sistema Seguro</span>
-    </div>
-  </footer>
+  <footer class="footer"><p>Catálogo administrado vía Telegram Bot</p><p style="margin-top:0.5rem;font-size:0.8rem;">Actualización automática en tiempo real</p><div class="footer-badge"><span>🔒</span> Sistema Seguro</div></footer>
 
   <script>
-  // ===== CONFIGURACIÓN =====
-  const CONFIG = {
-    whatsappNumbers: ['573214885822', '573004429451', '573212694280'],
-    autoRefreshSeconds: 30
-  };
+  const CONFIG = { whatsappNumbers: ['573214885822', '573004429451', '573212694280'], autoRefreshSeconds: 30 };
+  let allProducts = [], filteredProducts = [], currentCategory = 'todos', currentPhoneIndex = 0;
+  let modalMedia = [], modalIndex = 0;
 
-  let allProducts = [];
-  let filteredProducts = [];
-  let currentCategory = 'todos';
-  let currentPhoneIndex = 0;
+  document.addEventListener('DOMContentLoaded', async () => { await loadProducts(); setupSearch(); startAutoRefresh(); });
 
-  // ===== INICIO =====
-  document.addEventListener('DOMContentLoaded', async () => {
-    await loadProducts();
-    setupSearch();
-    startAutoRefresh();
-  });
-
-  // ===== CARGA DE PRODUCTOS =====
   async function loadProducts() {
     try {
-      const response = await fetch('productos.json?t=' + Date.now());
-      const data = await response.json();
+      const res = await fetch('productos.json?t=' + Date.now());
+      const data = await res.json();
       allProducts = Array.isArray(data) ? data : [];
       filteredProducts = [...allProducts];
       renderProducts();
-    } catch (e) {
-      console.error(e);
-      showEmptyState();
-    }
+    } catch (e) { console.error(e); showEmptyState(); }
   }
 
-  // ===== RENDERIZADO =====
+  function getMediaArray(prod) {
+    let media = [];
+    // Imagen principal
+    if (prod.imagen) media.push({ type: 'image', url: prod.imagen });
+    // Imágenes adicionales (array)
+    if (prod.imagenes && Array.isArray(prod.imagenes)) {
+      prod.imagenes.forEach(url => media.push({ type: 'image', url }));
+    }
+    // Videos (array)
+    if (prod.videos && Array.isArray(prod.videos)) {
+      prod.videos.forEach(url => media.push({ type: 'video', url }));
+    }
+    return media;
+  }
+
   function renderProducts() {
     const grid = document.getElementById('productsGrid');
-    const count = document.getElementById('productCount');
-    count.textContent = filteredProducts.length;
-
-    if (filteredProducts.length === 0) {
-      showEmptyState();
-      return;
-    }
-
+    document.getElementById('productCount').textContent = filteredProducts.length;
+    if (filteredProducts.length === 0) { showEmptyState(); return; }
     grid.innerHTML = '';
-    filteredProducts.forEach(prod => {
+    filteredProducts.forEach((prod, idx) => {
+      const media = getMediaArray(prod);
       const card = document.createElement('div');
       card.className = 'product-card';
       card.innerHTML = `
-        <div class="product-image" data-image="${prod.imagen}" data-name="${prod.nombre}">
-          ${prod.imagen ? `<img src="${prod.imagen}" alt="${prod.nombre}">` : '<div class="placeholder-icon">👟</div>'}
+        <div class="product-carousel" data-index="${idx}">
+          ${media.length > 1 ? `<button class="carousel-btn prev" onclick="carouselPrev(${idx})">‹</button>` : ''}
+          <div class="carousel-track" id="track-${idx}">
+            ${media.length > 0 ? media.map((m, i) => `
+              <div class="carousel-slide">
+                ${m.type === 'video' 
+                  ? `<video src="${m.url}" muted loop playsinline></video>` 
+                  : `<img src="${m.url}" alt="${prod.nombre}">`}
+              </div>
+            `).join('') : '<div class="carousel-slide" style="display:flex;align-items:center;justify-content:center;background:#1a1a1a;"><span style="font-size:4rem;">👟</span></div>'}
+          </div>
+          ${media.length > 1 ? `<button class="carousel-btn next" onclick="carouselNext(${idx})">›</button>` : ''}
+          ${media.length > 1 ? `<div class="carousel-dots" id="dots-${idx}">${media.map((_, i) => `<div class="carousel-dot ${i === 0 ? 'active' : ''}" onclick="carouselGo(${idx}, ${i})"></div>`).join('')}</div>` : ''}
+          ${media.length > 1 ? `<div class="media-count">📷 ${media.length}</div>` : ''}
           <div class="product-badge">Premium</div>
         </div>
         <div class="product-info">
           <h3 class="product-name">${prod.nombre}</h3>
           ${prod.descripcion ? `<p class="product-description">${prod.descripcion}</p>` : ''}
-          <div class="product-details">
-            <div class="price-section">
-              <div class="price-label">Precio</div>
-              <div class="product-price">${formatPrice(prod.precio)}</div>
-              ${prod.tallas ? `<div class="product-sizes">📏 Tallas: ${prod.tallas}</div>` : ''}
-            </div>
-            <a href="#" class="whatsapp-btn"
-              data-nombre="${prod.nombre}"
-              data-precio="${prod.precio}"
-              data-tallas="${prod.tallas || ''}"
-              data-imagen="${prod.imagen}">
-              💬 Consultar por WhatsApp
-            </a>
-          </div>
+          <div class="price-label">Precio</div>
+          <div class="product-price">${formatPrice(prod.precio)}</div>
+          ${prod.tallas ? `<div style="color:#aaa;font-size:0.85rem;margin-top:4px;">📏 Tallas: ${prod.tallas}</div>` : ''}
+          <a href="#" class="whatsapp-btn" onclick="event.preventDefault();consultarProducto('${prod.nombre}','${prod.precio}','${prod.tallas||''}')">💬 Consultar por WhatsApp</a>
         </div>
       `;
-      // eventos
-      card.querySelector('.product-image').onclick = () =>
-        openImageModal(prod.imagen, prod.nombre);
-
-      card.querySelector('.whatsapp-btn').onclick = (e) => {
-        e.preventDefault();
-        consultarProducto(prod.nombre, prod.precio, prod.tallas);
-      };
-
+      // Click en carrusel abre modal
+      card.querySelector('.carousel-track').onclick = () => openImageModal(media, 0);
       grid.appendChild(card);
     });
   }
 
-  // ===== FORMATO DE PRECIO =====
-  const formatPrice = (p) => parseFloat(p).toLocaleString('es-CO');
-
-  // ===== ESTADO VACÍO =====
-  function showEmptyState() {
-    document.getElementById('productsGrid').innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">📦</div>
-        <h2>Catálogo vacío</h2>
-        <p>Pronto agregaremos productos nuevos.</p>
-      </div>
-    `;
+  // Carrusel funciones
+  window.carouselPositions = {};
+  function carouselGo(idx, pos) {
+    const track = document.getElementById(`track-${idx}`);
+    const dots = document.getElementById(`dots-${idx}`);
+    if (!track) return;
+    const slides = track.children.length;
+    pos = Math.max(0, Math.min(pos, slides - 1));
+    window.carouselPositions[idx] = pos;
+    track.style.transform = `translateX(-${pos * 100}%)`;
+    if (dots) {
+      dots.querySelectorAll('.carousel-dot').forEach((d, i) => d.classList.toggle('active', i === pos));
+    }
+    // Autoplay video
+    track.querySelectorAll('video').forEach(v => v.pause());
+    const currentSlide = track.children[pos];
+    const video = currentSlide?.querySelector('video');
+    if (video) video.play();
   }
+  function carouselNext(idx) { carouselGo(idx, (window.carouselPositions[idx] || 0) + 1); }
+  function carouselPrev(idx) { carouselGo(idx, (window.carouselPositions[idx] || 0) - 1); }
 
-  // ===== FILTROS =====
-  function filterCategory(cat, e) {
-    currentCategory = cat;
-    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
-    e.target.classList.add('active');
-    filteredProducts = cat === 'todos'
-      ? allProducts
-      : allProducts.filter(p => (p.categoria || '').toLowerCase() === cat.toLowerCase());
-    renderProducts();
+  // Modal
+  function openImageModal(media, index) {
+    if (!media || media.length === 0) return;
+    modalMedia = media;
+    modalIndex = index;
+    showModalMedia();
+    document.getElementById('imageModal').classList.add('active');
   }
-
-  // ===== BUSCADOR =====
-  function setupSearch() {
-    document.getElementById('searchInput').addEventListener('input', e => {
-      const term = e.target.value.toLowerCase();
-      filteredProducts = allProducts.filter(p =>
-        p.nombre.toLowerCase().includes(term) ||
-        (p.descripcion && p.descripcion.toLowerCase().includes(term)) ||
-        (p.tallas && p.tallas.toLowerCase().includes(term))
-      );
-      renderProducts();
-    });
+  function showModalMedia() {
+    const img = document.getElementById('modalImage');
+    const vid = document.getElementById('modalVideo');
+    const current = modalMedia[modalIndex];
+    if (current.type === 'video') {
+      img.style.display = 'none';
+      vid.style.display = 'block';
+      vid.src = current.url;
+      vid.play();
+    } else {
+      vid.style.display = 'none';
+      vid.pause();
+      img.style.display = 'block';
+      img.src = current.url;
+    }
   }
-
-  // ===== ROTACIÓN DE WHATSAPP =====
-  function getNextPhone() {
-    const phone = CONFIG.whatsappNumbers[currentPhoneIndex];
-    currentPhoneIndex = (currentPhoneIndex + 1) % CONFIG.whatsappNumbers.length;
-    return phone;
-  }
-
-  // ===== CONSULTA =====
-  function consultarProducto(nombre, precio, tallas) {
-    const phone = getNextPhone();
-    const msg = `¡Hola! Estoy interesado en *${nombre}*.\n Precio: ${formatPrice(precio)}${tallas ? `\n Tallas: ${tallas}` : ''}\n¿Está disponible?`;
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-    showNotification(`Contactando vendedor ${phone}...`);
-    window.open(url, '_blank');
-  }
-
-  // ===== BOTÓN FLOTANTE =====
-  function contactarVendedor(e) {
-    e.preventDefault();
-    const phone = getNextPhone();
-    const msg = '¡Hola! Vi su catálogo y quiero más información.';
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-    showNotification('Conectando con vendedor...');
-    window.open(url, '_blank');
-  }
-
-  // ===== MODAL IMAGEN =====
-  function openImageModal(src, name) {
-    const modal = document.getElementById('imageModal');
-    document.getElementById('modalImage').src = src;
-    modal.classList.add('active');
-  }
+  function modalNext() { modalIndex = (modalIndex + 1) % modalMedia.length; showModalMedia(); }
+  function modalPrev() { modalIndex = (modalIndex - 1 + modalMedia.length) % modalMedia.length; showModalMedia(); }
   function closeImageModal() {
     document.getElementById('imageModal').classList.remove('active');
+    document.getElementById('modalVideo').pause();
   }
 
-  // ===== NOTIFICACIÓN =====
-  function showNotification(msg) {
-    const n = document.getElementById('notification');
-    n.textContent = msg;
-    n.classList.add('show');
-    setTimeout(() => n.classList.remove('show'), 2500);
-  }
-
-  // ===== AUTO REFRESH =====
-  function startAutoRefresh() {
-    setInterval(loadProducts, CONFIG.autoRefreshSeconds * 1000);
-  }
+  const formatPrice = p => parseFloat(p).toLocaleString('es-CO');
+  function showEmptyState() { document.getElementById('productsGrid').innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><h2>Catálogo vacío</h2><p>Pronto agregaremos productos nuevos.</p></div>`; }
+  function filterCategory(cat, e) { currentCategory = cat; document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); filteredProducts = cat === 'todos' ? allProducts : allProducts.filter(p => (p.categoria || '').toLowerCase() === cat.toLowerCase()); renderProducts(); }
+  function setupSearch() { document.getElementById('searchInput').addEventListener('input', e => { const t = e.target.value.toLowerCase(); filteredProducts = allProducts.filter(p => p.nombre.toLowerCase().includes(t) || (p.descripcion && p.descripcion.toLowerCase().includes(t))); renderProducts(); }); }
+  function getNextPhone() { const p = CONFIG.whatsappNumbers[currentPhoneIndex]; currentPhoneIndex = (currentPhoneIndex + 1) % CONFIG.whatsappNumbers.length; return p; }
+  function consultarProducto(n, p, t) { const phone = getNextPhone(); const msg = `¡Hola! Estoy interesado en *${n}*.\nPrecio: ${formatPrice(p)}${t ? `\nTallas: ${t}` : ''}\n¿Está disponible?`; window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank'); }
+  function contactarVendedor(e) { e.preventDefault(); const phone = getNextPhone(); window.open(`https://wa.me/${phone}?text=${encodeURIComponent('¡Hola! Vi su catálogo y quiero más información.')}`, '_blank'); }
+  function startAutoRefresh() { setInterval(loadProducts, CONFIG.autoRefreshSeconds * 1000); }
   </script>
 </body>
 </html>
