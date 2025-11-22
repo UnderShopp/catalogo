@@ -1,51 +1,3 @@
-async def recibir_imagen(update, context):
-    img_url = ""
-    
-    if update.message.photo:
-        # Descargar la imagen de Telegram
-        photo = update.message.photo[-1]
-        file = await photo.get_file()
-        
-        # Si hay API key de ImgBB, subir ahí
-        if IMGBB_API_KEY:
-            try:
-                # Descargar bytes
-                file_bytes = await file.download_as_bytearray()
-                
-                # Subir a ImgBB
-                img_url = await subir_imagen_imgbb(file_bytes, f"producto_{int(datetime.now().timestamp())}.jpg")
-                
-                if not img_url:
-                    await update.message.reply_text("⚠️ No se pudo subir la imagen, continuando sin imagen...")
-                    img_url = ""
-            except Exception as e:
-                print(f"Error descargando/subiendo imagen: {e}")
-                await update.message.reply_text("⚠️ Error con la imagen, continuando sin imagen...")
-                img_url = ""
-        else:
-            # Sin ImgBB, usar URL de Telegram (no funcionará en web)
-            img_url = file.file_path
-            await update.message.reply_text(
-                "⚠️ *Imagen de Telegram detectada*\n\n"
-                "Para que las imágenes se vean en el catálogo web, necesitas:\n"
-                "1. Crear cuenta en imgbb.com (gratis)\n"
-                "2. Obtener tu API key\n"
-                "3. Agregar en Render: IMGBB_API_KEY=tu_key\n\n"
-                "Por ahora, el producto se guardará sin imagen visible.",
-                parse_mode="Markdown"
-            )
-            img_url = ""
-    else:
-        # Texto recibido en lugar de foto
-        texto = update.message.text.strip() if update.message.text else ""
-        if texto and texto.startswith("http"):
-            # Es una URL, guardarla directamente
-            img_url = texto
-        else:
-            img_url = ""
-    
-    context.user_data['imagen'] = img_url
-    return await finalizar_producto(update, context)#!/usr/bin/env python3
 #!/usr/bin/env python3
 import os
 import json
@@ -70,36 +22,8 @@ if ADMIN_IDS_STR:
 GITHUB_USER = os.getenv("GITHUB_USER")
 GITHUB_REPO = os.getenv("GITHUB_REPO")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-IMGBB_API_KEY = os.getenv("IMGBB_API_KEY", "")  # API key de ImgBB (opcional)
+IMGBB_API_KEY = os.getenv("IMGBB_API_KEY", "")
 
-# Limpiar el nombre del repo si viene con usuario duplicado
-if GITHUB_REPO and "/" in GITHUB_REPO:
-    GITHUB_REPO = GITHUB_REPO.split("/")[-1]
-
-print(f"\n🧩 CONFIGURACIÓN:")
-print(f"   BOT_TOKEN: {'✅' if BOT_TOKEN else '❌'}")
-print(f"   ADMIN_IDS: {ADMIN_IDS}")
-print(f"   GITHUB_USER: {GITHUB_USER}")
-print(f"   GITHUB_REPO: {GITHUB_REPO}")
-print(f"   GITHUB_TOKEN: {'✅' if GITHUB_TOKEN else '❌'}")
-print(f"   IMGBB_API_KEY: {'✅' if IMGBB_API_KEY else '⚠️ (imágenes no públicas)'}\n")
-
-# CONFIGURACIÓN
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_IDS_STR = os.getenv("ADMIN_IDS", "")
-ADMIN_IDS = []
-if ADMIN_IDS_STR:
-    try:
-        ADMIN_IDS = [int(id.strip()) for id in ADMIN_IDS_STR.split(",") if id.strip()]
-    except ValueError:
-        print("Error parseando ADMIN_IDS")
-
-GITHUB_USER = os.getenv("GITHUB_USER")
-GITHUB_REPO = os.getenv("GITHUB_REPO")
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-IMGBB_API_KEY = os.getenv("IMGBB_API_KEY", "")  # API key de ImgBB (opcional)
-
-# Limpiar el nombre del repo si viene con usuario duplicado
 if GITHUB_REPO and "/" in GITHUB_REPO:
     GITHUB_REPO = GITHUB_REPO.split("/")[-1]
 
@@ -116,20 +40,18 @@ JSON_FILENAME = "productos.json"
 REPO_BRANCH = "main"
 
 # Estados de conversación
-NOMBRE, PRECIO, DESCRIPCION, TALLAS, CATEGORIA, IMAGEN = range(6)
-EDITAR_CAMPO, EDITAR_VALOR = range(6, 8)
+NOMBRE, PRECIO, DESCRIPCION, TALLAS, CATEGORIA, IMAGEN, MAS_MEDIOS = range(7)
+EDITAR_CAMPO, EDITAR_VALOR = range(7, 9)
 
 productos_db = {}
 
 # GIT FUNCTIONS
 def repo_url_with_token():
-    """Construye la URL del repositorio con autenticación"""
     if not GITHUB_USER or not GITHUB_REPO:
         return None
     return f"https://{GITHUB_TOKEN}@github.com/{GITHUB_USER}/{GITHUB_REPO}.git"
 
 def ensure_repo():
-    """Asegura que el repositorio Git esté clonado y actualizado"""
     try:
         repo_url = repo_url_with_token()
         if not repo_url:
@@ -141,14 +63,10 @@ def ensure_repo():
             LOCAL_REPO_PATH.mkdir(parents=True, exist_ok=True)
             result = subprocess.run(
                 ["git", "clone", "--depth", "1", "--single-branch", "--branch", REPO_BRANCH, repo_url, str(LOCAL_REPO_PATH)],
-                capture_output=True,
-                text=True,
-                timeout=60
+                capture_output=True, text=True, timeout=60
             )
             if result.returncode != 0:
                 print(f"❌ Error clonando: {result.stderr}")
-                print(f"   URL (sin token): https://github.com/{GITHUB_USER}/{GITHUB_REPO}.git")
-                # Intentar crear el directorio básico
                 import shutil
                 if LOCAL_REPO_PATH.exists():
                     shutil.rmtree(LOCAL_REPO_PATH)
@@ -156,7 +74,6 @@ def ensure_repo():
                 return False
             print("✅ Repositorio clonado")
         else:
-            # Verificar que es un repositorio válido
             git_dir = LOCAL_REPO_PATH / ".git"
             if not git_dir.exists():
                 print("⚠️ No es un repo válido, eliminando y clonando de nuevo...")
@@ -167,13 +84,10 @@ def ensure_repo():
             print("🔄 Actualizando repositorio...")
             result = subprocess.run(
                 ["git", "-C", str(LOCAL_REPO_PATH), "pull", "origin", REPO_BRANCH],
-                capture_output=True,
-                text=True,
-                timeout=30
+                capture_output=True, text=True, timeout=30
             )
             if result.returncode != 0:
                 print(f"⚠️ Error en pull: {result.stderr}")
-                print("🔄 Intentando reset...")
                 subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "fetch", "origin"], timeout=30)
                 subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "reset", "--hard", f"origin/{REPO_BRANCH}"])
             else:
@@ -184,8 +98,6 @@ def ensure_repo():
         return False
     except Exception as e:
         print(f"❌ Error con git: {e}")
-        import traceback
-        traceback.print_exc()
         return False
 
 def load_productos_from_disk():
@@ -203,24 +115,15 @@ def load_productos_from_disk():
     return []
 
 def save_and_push_productos():
-    """Guarda productos en JSON y hace push a GitHub"""
     try:
         print("\n💾 Guardando productos...")
-        
-        # Asegurar que existe el directorio y el repo
         if not LOCAL_REPO_PATH.exists():
-            print("📂 Creando directorio de trabajo...")
             LOCAL_REPO_PATH.mkdir(parents=True, exist_ok=True)
         
-        # Verificar que el directorio es un repo Git válido
         git_dir = LOCAL_REPO_PATH / ".git"
         if not git_dir.exists():
-            print("⚠️ No hay repositorio Git, intentando clonar...")
             ok = ensure_repo()
             if not ok:
-                print("❌ No se pudo clonar el repositorio")
-                print("ℹ️ Guardando solo localmente...")
-                # Guardar solo local si no hay Git
                 ruta = LOCAL_REPO_PATH / JSON_FILENAME
                 lista = list(productos_db.values())
                 with ruta.open("w", encoding="utf-8") as f:
@@ -235,132 +138,58 @@ def save_and_push_productos():
             json.dump(lista, f, ensure_ascii=False, indent=2)
         print("✅ Archivo escrito")
         
-        # Si no hay .git, no intentar hacer push
         if not git_dir.exists():
-            print("ℹ️ Sin Git, solo guardado local")
             return True
         
-        # Configurar Git
-        subprocess.run(
-            ["git", "-C", str(LOCAL_REPO_PATH), "config", "user.email", "bot@undershopp.local"],
-            capture_output=True,
-            check=False
-        )
-        subprocess.run(
-            ["git", "-C", str(LOCAL_REPO_PATH), "config", "user.name", "UnderShoppBot"],
-            capture_output=True,
-            check=False
-        )
+        subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "config", "user.email", "bot@undershopp.local"], capture_output=True)
+        subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "config", "user.name", "UnderShoppBot"], capture_output=True)
         
-        print("➕ Git add...")
-        result = subprocess.run(
-            ["git", "-C", str(LOCAL_REPO_PATH), "add", JSON_FILENAME],
-            capture_output=True,
-            text=True
-        )
-        if result.returncode != 0:
-            print(f"⚠️ Error en add: {result.stderr}")
-            return True  # Aún así retornar True porque se guardó localmente
+        subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "add", JSON_FILENAME], capture_output=True)
         
-        # Verificar si hay cambios
-        res = subprocess.run(
-            ["git", "-C", str(LOCAL_REPO_PATH), "status", "--porcelain"],
-            capture_output=True,
-            text=True
-        )
+        res = subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "status", "--porcelain"], capture_output=True, text=True)
         if res.stdout.strip() == "":
-            print("ℹ️ No hay cambios para commitear")
+            print("ℹ️ No hay cambios")
             return True
         
-        print("📝 Git commit...")
-        mensaje = f"Bot: actualizacion {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}"
-        result = subprocess.run(
-            ["git", "-C", str(LOCAL_REPO_PATH), "commit", "-m", mensaje],
-            capture_output=True,
-            text=True
-        )
-        if result.returncode != 0:
-            print(f"⚠️ Error en commit: {result.stderr}")
-            return True
+        mensaje = f"Bot: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}"
+        subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "commit", "-m", mensaje], capture_output=True)
         
-        print("☁️ Git push...")
         repo_url = repo_url_with_token()
-        if not repo_url:
-            print("❌ No se puede construir URL para push")
-            return True
-        
-        result = subprocess.run(
-            ["git", "-C", str(LOCAL_REPO_PATH), "push", repo_url, REPO_BRANCH],
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        
-        if result.returncode != 0:
-            print(f"⚠️ ERROR EN PUSH:")
-            print(f"   Return code: {result.returncode}")
-            print(f"   Stderr: {result.stderr}")
-            return True  # Retornar True porque se guardó localmente
-        
-        print("✅ Push exitoso\n")
-        return True
-        
-    except subprocess.TimeoutExpired:
-        print("⚠️ Timeout en operación Git")
+        if repo_url:
+            result = subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "push", repo_url, REPO_BRANCH], capture_output=True, text=True, timeout=30)
+            if result.returncode == 0:
+                print("✅ Push exitoso\n")
         return True
     except Exception as e:
         print(f"⚠️ Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return True  # Retornar True para no bloquear el bot
+        return True
 
 def format_precio(precio):
-    """Formatea el precio sin decimales si es entero"""
     try:
         precio_float = float(precio)
         if precio_float == int(precio_float):
             return f"{int(precio_float):,}"
-        else:
-            return f"{precio_float:,.2f}"
+        return f"{precio_float:,.2f}"
     except:
         return str(precio)
 
 async def subir_imagen_imgbb(file_bytes, filename="producto.jpg"):
-    """Sube una imagen a ImgBB y retorna la URL pública"""
     if not IMGBB_API_KEY:
-        print("⚠️ No hay IMGBB_API_KEY configurado")
         return None
-    
     try:
-        print("📤 Subiendo imagen a ImgBB...")
-        
-        # Convertir bytes a base64
         image_base64 = base64.b64encode(file_bytes).decode('utf-8')
-        
-        # Hacer request a ImgBB
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
                 "https://api.imgbb.com/1/upload",
-                data={
-                    "key": IMGBB_API_KEY,
-                    "image": image_base64,
-                    "name": filename
-                }
+                data={"key": IMGBB_API_KEY, "image": image_base64, "name": filename}
             )
-            
             if response.status_code == 200:
                 data = response.json()
                 if data.get("success"):
-                    url = data["data"]["url"]
+                    url = data["data"]["display_url"]
                     print(f"✅ Imagen subida: {url}")
                     return url
-                else:
-                    print(f"❌ Error en ImgBB: {data}")
-                    return None
-            else:
-                print(f"❌ Error HTTP {response.status_code}")
-                return None
-                
+        return None
     except Exception as e:
         print(f"❌ Error subiendo imagen: {e}")
         return None
@@ -375,7 +204,6 @@ def solo_admins(func):
         uid = user.id if user else None
         if not es_admin(uid):
             await update.message.reply_text(f"🚫 Acceso denegado. Tu ID: {uid}")
-            print(f"⚠️ Acceso no autorizado - ID: {uid}")
             return
         return await func(update, context)
     return wrapper
@@ -386,67 +214,39 @@ async def start(update, context):
     user = update.effective_user
     await update.message.reply_text(
         f"👋 *Bienvenido {user.first_name}*\n\n"
-        f"📋 *Comandos disponibles:*\n\n"
+        f"📋 *Comandos:*\n\n"
         f"🆕 /agregar - Agregar producto\n"
-        f"📋 /listar - Ver todos los productos\n"
-        f"✏️ /editar - Editar un producto\n"
-        f"🗑️ /eliminar - Eliminar un producto\n"
-        f"🌐 /catalogo - Ver URL del catálogo\n"
-        f"❓ /ayuda - Ver ayuda detallada\n\n"
-        f"💡 Tienes acceso de administrador",
+        f"📋 /listar - Ver productos\n"
+        f"✏️ /editar - Editar producto\n"
+        f"🗑️ /eliminar - Eliminar producto\n"
+        f"🌐 /catalogo - Ver URL\n"
+        f"❓ /ayuda - Ayuda",
         parse_mode="Markdown"
     )
 
 @solo_admins
 async def ayuda(update, context):
     await update.message.reply_text(
-        "📚 *Guía de Uso del Bot*\n\n"
-        "*🆕 Agregar Producto:*\n"
-        "1. Usa /agregar\n"
-        "2. Sigue los pasos:\n"
-        "   • Nombre del producto\n"
-        "   • Precio (solo números)\n"
-        "   • Descripción (opcional)\n"
-        "   • Tallas disponibles (opcional)\n"
-        "   • Categoría (zapatillas/ropa)\n"
-        "   • Foto del producto (opcional)\n"
-        "3. Usa /saltar para omitir campos opcionales\n"
-        "4. Usa /cancelar para cancelar\n\n"
-        "*📋 Ver Productos:*\n"
-        "• /listar - Muestra todos los productos\n\n"
-        "*✏️ Editar Producto:*\n"
-        "1. Usa /editar\n"
-        "2. Selecciona el producto\n"
-        "3. Elige qué campo editar\n"
-        "4. Ingresa el nuevo valor\n\n"
-        "*🗑️ Eliminar Producto:*\n"
-        "1. Usa /eliminar\n"
-        "2. Selecciona el producto a eliminar\n"
-        "3. Confirma la eliminación\n\n"
-        "*🌐 Ver Catálogo Web:*\n"
-        "• /catalogo - Muestra la URL de tu tienda\n\n"
-        "*💡 Consejos:*\n"
-        "• Las fotos mejoran las ventas\n"
-        "• Descripciones claras atraen más clientes\n"
-        "• Especifica todas las tallas disponibles\n"
-        "• Revisa los precios antes de publicar",
+        "📚 *Guía del Bot*\n\n"
+        "*Agregar:* /agregar\n"
+        "• Nombre, precio, descripción, tallas\n"
+        "• Categoría y fotos/videos\n"
+        "• Puedes agregar múltiples fotos y videos\n\n"
+        "*Comandos útiles:*\n"
+        "• /saltar - Omitir campo opcional\n"
+        "• /cancelar - Cancelar operación",
         parse_mode="Markdown"
     )
 
 @solo_admins
 async def catalogo(update, context):
-    url = f"https://{GITHUB_USER}.github.io/{GITHUB_REPO.split('/',1)[1] if '/' in GITHUB_REPO else GITHUB_REPO}/"
-    await update.message.reply_text(
-        f"🌐 *Catálogo Web:*\n\n"
-        f"{url}\n\n"
-        f"📱 Comparte este enlace con tus clientes",
-        parse_mode="Markdown"
-    )
+    url = f"https://{GITHUB_USER}.github.io/{GITHUB_REPO}/"
+    await update.message.reply_text(f"🌐 *Catálogo:*\n\n{url}", parse_mode="Markdown")
 
 @solo_admins
 async def listar(update, context):
     if not productos_db:
-        await update.message.reply_text("📭 No hay productos en el catálogo")
+        await update.message.reply_text("📭 No hay productos")
         return
     
     productos_ordenados = sorted(productos_db.values(), key=lambda x: x.get("fecha",""), reverse=True)
@@ -454,13 +254,16 @@ async def listar(update, context):
     
     for i, p in enumerate(productos_ordenados, 1):
         cat_emoji = "👟" if p.get("categoria") == "zapatillas" else "👕"
-        precio_fmt = format_precio(p.get('precio', '0'))
-        texto += f"{i}. {cat_emoji} *{p.get('nombre')}*\n   💰 ${precio_fmt}\n"
-        if p.get('tallas'):
-            texto += f"   📏 Tallas: {p.get('tallas')}\n"
-        texto += f"   🆔 ID: `{p.get('id')}`\n\n"
+        texto += f"{i}. {cat_emoji} *{p.get('nombre')}*\n   💰 ${format_precio(p.get('precio', '0'))}\n"
         
-        # Telegram tiene límite de 4096 caracteres
+        # Contar medios
+        medios = 1 if p.get('imagen') else 0
+        medios += len(p.get('imagenes', []))
+        medios += len(p.get('videos', []))
+        if medios > 0:
+            texto += f"   📷 {medios} medios\n"
+        texto += "\n"
+        
         if len(texto) > 3500:
             await update.message.reply_text(texto, parse_mode="Markdown")
             texto = ""
@@ -471,33 +274,24 @@ async def listar(update, context):
 @solo_admins
 async def eliminar_comando(update, context):
     if not productos_db:
-        await update.message.reply_text("📭 No hay productos para eliminar")
+        await update.message.reply_text("📭 No hay productos")
         return
     
-    # Crear botones con los productos
     productos_ordenados = sorted(productos_db.values(), key=lambda x: x.get("fecha",""), reverse=True)
     keyboard = []
-    
-    for p in productos_ordenados[:20]:  # Máximo 20 para no saturar
+    for p in productos_ordenados[:20]:
         cat_emoji = "👟" if p.get("categoria") == "zapatillas" else "👕"
-        precio_fmt = format_precio(p.get('precio', '0'))
-        texto_boton = f"{cat_emoji} {p.get('nombre')} - ${precio_fmt}"
-        keyboard.append([InlineKeyboardButton(texto_boton, callback_data=f"del_{p.get('id')}")])
-    
+        keyboard.append([InlineKeyboardButton(f"{cat_emoji} {p.get('nombre')}", callback_data=f"del_{p.get('id')}")])
     keyboard.append([InlineKeyboardButton("❌ Cancelar", callback_data="del_cancelar")])
     
-    await update.message.reply_text(
-        "🗑️ *Eliminar Producto*\n\nSelecciona el producto que deseas eliminar:",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
-    )
+    await update.message.reply_text("🗑️ *Selecciona producto:*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
 async def eliminar_callback(update, context):
     query = update.callback_query
     await query.answer()
     
     if query.data == "del_cancelar":
-        await query.edit_message_text("❌ Eliminación cancelada")
+        await query.edit_message_text("❌ Cancelado")
         return
     
     if query.data.startswith("del_confirm_"):
@@ -505,39 +299,20 @@ async def eliminar_callback(update, context):
         if producto_id in productos_db:
             producto = productos_db[producto_id]
             del productos_db[producto_id]
-            
             if save_and_push_productos():
-                cat_emoji = "👟" if producto.get("categoria") == "zapatillas" else "👕"
-                await query.edit_message_text(
-                    f"✅ *Producto eliminado*\n\n"
-                    f"{cat_emoji} {producto.get('nombre')}\n"
-                    f"💰 ${format_precio(producto.get('precio', '0'))}\n\n"
-                    f"🌐 Cambios sincronizados con el catálogo web",
-                    parse_mode="Markdown"
-                )
-            else:
-                await query.edit_message_text("⚠️ Error al guardar cambios en GitHub")
-        else:
-            await query.edit_message_text("❌ Producto no encontrado")
+                await query.edit_message_text(f"✅ *{producto.get('nombre')}* eliminado", parse_mode="Markdown")
         return
     
     if query.data.startswith("del_"):
         producto_id = query.data.replace("del_", "")
         if producto_id in productos_db:
             producto = productos_db[producto_id]
-            cat_emoji = "👟" if producto.get("categoria") == "zapatillas" else "👕"
-            
             keyboard = [
                 [InlineKeyboardButton("✅ Sí, eliminar", callback_data=f"del_confirm_{producto_id}")],
-                [InlineKeyboardButton("❌ No, cancelar", callback_data="del_cancelar")]
+                [InlineKeyboardButton("❌ Cancelar", callback_data="del_cancelar")]
             ]
-            
             await query.edit_message_text(
-                f"⚠️ *¿Confirmar eliminación?*\n\n"
-                f"{cat_emoji} *{producto.get('nombre')}*\n"
-                f"💰 ${format_precio(producto.get('precio', '0'))}\n"
-                f"📏 Tallas: {producto.get('tallas', 'N/A')}\n\n"
-                f"Esta acción no se puede deshacer.",
+                f"⚠️ *¿Eliminar {producto.get('nombre')}?*",
                 reply_markup=InlineKeyboardMarkup(keyboard),
                 parse_mode="Markdown"
             )
@@ -545,26 +320,17 @@ async def eliminar_callback(update, context):
 @solo_admins
 async def editar_comando(update, context):
     if not productos_db:
-        await update.message.reply_text("📭 No hay productos para editar")
+        await update.message.reply_text("📭 No hay productos")
         return ConversationHandler.END
     
-    # Crear botones con los productos
     productos_ordenados = sorted(productos_db.values(), key=lambda x: x.get("fecha",""), reverse=True)
     keyboard = []
-    
     for p in productos_ordenados[:20]:
         cat_emoji = "👟" if p.get("categoria") == "zapatillas" else "👕"
-        precio_fmt = format_precio(p.get('precio', '0'))
-        texto_boton = f"{cat_emoji} {p.get('nombre')} - ${precio_fmt}"
-        keyboard.append([InlineKeyboardButton(texto_boton, callback_data=f"edit_{p.get('id')}")])
-    
+        keyboard.append([InlineKeyboardButton(f"{cat_emoji} {p.get('nombre')}", callback_data=f"edit_{p.get('id')}")])
     keyboard.append([InlineKeyboardButton("❌ Cancelar", callback_data="edit_cancelar")])
     
-    await update.message.reply_text(
-        "✏️ *Editar Producto*\n\nSelecciona el producto que deseas editar:",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
-    )
+    await update.message.reply_text("✏️ *Selecciona producto:*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
     return EDITAR_CAMPO
 
 async def editar_seleccionar_campo(update, context):
@@ -572,36 +338,23 @@ async def editar_seleccionar_campo(update, context):
     await query.answer()
     
     if query.data == "edit_cancelar":
-        await query.edit_message_text("❌ Edición cancelada")
+        await query.edit_message_text("❌ Cancelado")
         return ConversationHandler.END
     
     if query.data.startswith("edit_"):
         producto_id = query.data.replace("edit_", "")
         if producto_id in productos_db:
             context.user_data['edit_producto_id'] = producto_id
-            producto = productos_db[producto_id]
-            
             keyboard = [
                 [InlineKeyboardButton("📝 Nombre", callback_data="editfield_nombre")],
                 [InlineKeyboardButton("💰 Precio", callback_data="editfield_precio")],
                 [InlineKeyboardButton("📄 Descripción", callback_data="editfield_descripcion")],
                 [InlineKeyboardButton("📏 Tallas", callback_data="editfield_tallas")],
                 [InlineKeyboardButton("🏷️ Categoría", callback_data="editfield_categoria")],
-                [InlineKeyboardButton("📸 Imagen", callback_data="editfield_imagen")],
                 [InlineKeyboardButton("❌ Cancelar", callback_data="edit_cancelar")]
             ]
-            
-            cat_emoji = "👟" if producto.get("categoria") == "zapatillas" else "👕"
-            await query.edit_message_text(
-                f"✏️ *Editando:*\n\n"
-                f"{cat_emoji} *{producto.get('nombre')}*\n"
-                f"💰 ${format_precio(producto.get('precio', '0'))}\n\n"
-                f"¿Qué campo deseas editar?",
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="Markdown"
-            )
+            await query.edit_message_text("¿Qué editar?", reply_markup=InlineKeyboardMarkup(keyboard))
             return EDITAR_CAMPO
-    
     return ConversationHandler.END
 
 async def editar_pedir_valor(update, context):
@@ -609,37 +362,20 @@ async def editar_pedir_valor(update, context):
     await query.answer()
     
     if query.data == "edit_cancelar":
-        await query.edit_message_text("❌ Edición cancelada")
+        await query.edit_message_text("❌ Cancelado")
         return ConversationHandler.END
     
     if query.data == "editfield_categoria":
         keyboard = [
             [InlineKeyboardButton("👟 Zapatillas", callback_data="editcat_zapatillas")],
-            [InlineKeyboardButton("👕 Ropa", callback_data="editcat_ropa")],
-            [InlineKeyboardButton("❌ Cancelar", callback_data="edit_cancelar")]
+            [InlineKeyboardButton("👕 Ropa", callback_data="editcat_ropa")]
         ]
-        await query.edit_message_text(
-            "🏷️ Selecciona la nueva categoría:",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+        await query.edit_message_text("Categoría:", reply_markup=InlineKeyboardMarkup(keyboard))
         return EDITAR_CAMPO
     
     campo = query.data.replace("editfield_", "")
     context.user_data['edit_campo'] = campo
-    
-    campos_nombres = {
-        "nombre": "📝 Nombre",
-        "precio": "💰 Precio",
-        "descripcion": "📄 Descripción",
-        "tallas": "📏 Tallas",
-        "imagen": "📸 URL de imagen"
-    }
-    
-    await query.edit_message_text(
-        f"✏️ Ingresa el nuevo valor para {campos_nombres.get(campo, campo)}:\n\n"
-        f"_(o envía /cancelar para cancelar)_",
-        parse_mode="Markdown"
-    )
+    await query.edit_message_text(f"Ingresa nuevo valor para {campo}:")
     return EDITAR_VALOR
 
 async def editar_guardar_valor(update, context):
@@ -651,32 +387,17 @@ async def editar_guardar_valor(update, context):
         await update.message.reply_text("❌ Producto no encontrado")
         return ConversationHandler.END
     
-    # Validar precio
     if campo == "precio":
         try:
             precio_limpio = nuevo_valor.replace("$", "").replace(",", "").replace(".", "")
-            precio_float = float(precio_limpio)
-            nuevo_valor = f"{precio_float:.0f}"
+            nuevo_valor = f"{float(precio_limpio):.0f}"
         except:
-            await update.message.reply_text("❌ Precio inválido. Edición cancelada.")
+            await update.message.reply_text("❌ Precio inválido")
             return ConversationHandler.END
     
-    # Guardar cambio
     productos_db[producto_id][campo] = nuevo_valor
-    
-    if save_and_push_productos():
-        producto = productos_db[producto_id]
-        cat_emoji = "👟" if producto.get("categoria") == "zapatillas" else "👕"
-        await update.message.reply_text(
-            f"✅ *Producto actualizado*\n\n"
-            f"{cat_emoji} *{producto.get('nombre')}*\n"
-            f"💰 ${format_precio(producto.get('precio', '0'))}\n\n"
-            f"🌐 Cambios sincronizados con el catálogo web",
-            parse_mode="Markdown"
-        )
-    else:
-        await update.message.reply_text("⚠️ Error al guardar cambios en GitHub")
-    
+    save_and_push_productos()
+    await update.message.reply_text("✅ Actualizado")
     context.user_data.clear()
     return ConversationHandler.END
 
@@ -685,8 +406,7 @@ async def editar_guardar_categoria(update, context):
     await query.answer()
     
     if query.data == "edit_cancelar":
-        await query.edit_message_text("❌ Edición cancelada")
-        context.user_data.clear()
+        await query.edit_message_text("❌ Cancelado")
         return ConversationHandler.END
     
     producto_id = context.user_data.get('edit_producto_id')
@@ -694,19 +414,8 @@ async def editar_guardar_categoria(update, context):
     
     if producto_id in productos_db:
         productos_db[producto_id]['categoria'] = nueva_categoria
-        
-        if save_and_push_productos():
-            producto = productos_db[producto_id]
-            cat_emoji = "👟" if nueva_categoria == "zapatillas" else "👕"
-            await query.edit_message_text(
-                f"✅ *Producto actualizado*\n\n"
-                f"{cat_emoji} *{producto.get('nombre')}*\n"
-                f"💰 ${format_precio(producto.get('precio', '0'))}\n\n"
-                f"🌐 Cambios sincronizados con el catálogo web",
-                parse_mode="Markdown"
-            )
-        else:
-            await query.edit_message_text("⚠️ Error al guardar cambios en GitHub")
+        save_and_push_productos()
+        await query.edit_message_text("✅ Categoría actualizada")
     
     context.user_data.clear()
     return ConversationHandler.END
@@ -715,21 +424,14 @@ async def editar_guardar_categoria(update, context):
 @solo_admins
 async def agregar_inicio(update, context):
     context.user_data.clear()
-    await update.message.reply_text(
-        "✨ *Agregar Producto*\n\n"
-        "Paso 1/6: Escribe el *nombre* del producto\n\n"
-        "_(o /cancelar para cancelar)_",
-        parse_mode="Markdown"
-    )
+    context.user_data['imagenes'] = []
+    context.user_data['videos'] = []
+    await update.message.reply_text("✨ *Agregar Producto*\n\nPaso 1/6: *Nombre*", parse_mode="Markdown")
     return NOMBRE
 
 async def recibir_nombre(update, context):
     context.user_data['nombre'] = update.message.text.strip()
-    await update.message.reply_text(
-        "💰 Paso 2/6: Escribe el *precio*\n\n"
-        "Ejemplos: 150000, 150.50, 1500",
-        parse_mode="Markdown"
-    )
+    await update.message.reply_text("💰 Paso 2/6: *Precio*", parse_mode="Markdown")
     return PRECIO
 
 async def recibir_precio(update, context):
@@ -737,24 +439,15 @@ async def recibir_precio(update, context):
     try:
         precio = float(texto)
     except:
-        await update.message.reply_text("❌ Precio inválido. Escribe solo números:")
+        await update.message.reply_text("❌ Precio inválido")
         return PRECIO
     context.user_data['precio'] = f"{precio:.0f}"
-    await update.message.reply_text(
-        "📝 Paso 3/6: Escribe una *descripción*\n\n"
-        "_(o /saltar para omitir)_",
-        parse_mode="Markdown"
-    )
+    await update.message.reply_text("📝 Paso 3/6: *Descripción* (o /saltar)", parse_mode="Markdown")
     return DESCRIPCION
 
 async def recibir_descripcion(update, context):
     context.user_data['descripcion'] = update.message.text.strip()
-    await update.message.reply_text(
-        "📏 Paso 4/6: ¿Qué *tallas* hay disponibles?\n\n"
-        "Ejemplos: 36-42, 38,40,42, S,M,L,XL\n"
-        "_(o /saltar para omitir)_",
-        parse_mode="Markdown"
-    )
+    await update.message.reply_text("📏 Paso 4/6: *Tallas* (o /saltar)", parse_mode="Markdown")
     return TALLAS
 
 async def recibir_tallas(update, context):
@@ -763,99 +456,186 @@ async def recibir_tallas(update, context):
         [InlineKeyboardButton("👟 Zapatillas", callback_data="cat_zapatillas")],
         [InlineKeyboardButton("👕 Ropa", callback_data="cat_ropa")]
     ]
-    await update.message.reply_text(
-        "🏷️ Paso 5/6: Selecciona la *categoría*",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
-    )
+    await update.message.reply_text("🏷️ Paso 5/6: *Categoría*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
     return CATEGORIA
 
 async def recibir_categoria(update, context):
     query = update.callback_query
     await query.answer()
     context.user_data['categoria'] = query.data.replace("cat_", "")
-    cat_emoji = "👟" if query.data == "cat_zapatillas" else "👕"
     await query.edit_message_text(
-        f"✅ Categoría: {cat_emoji}\n\n"
-        f"📸 Paso 6/6: Envía una *foto* del producto\n\n"
-        f"_(o /saltar para omitir)_",
+        "📸 Paso 6/6: Envía *fotos o videos*\n\n"
+        "Puedes enviar múltiples archivos.\n"
+        "_(o /saltar para omitir)_",
         parse_mode="Markdown"
     )
     return IMAGEN
 
 async def recibir_imagen(update, context):
+    if 'imagenes' not in context.user_data:
+        context.user_data['imagenes'] = []
+    if 'videos' not in context.user_data:
+        context.user_data['videos'] = []
+    
     img_url = ""
+    es_video = False
     
     if update.message.photo:
-        # Descargar la imagen de Telegram
         photo = update.message.photo[-1]
         file = await photo.get_file()
-        
-        # Si hay API key de ImgBB, subir ahí
         if IMGBB_API_KEY:
             try:
                 await update.message.reply_text("📤 Subiendo imagen...")
-                
-                # Descargar bytes
                 file_bytes = await file.download_as_bytearray()
-                
-                # Subir a ImgBB
-                img_url = await subir_imagen_imgbb(file_bytes, f"producto_{int(datetime.now().timestamp())}.jpg")
-                
+                img_url = await subir_imagen_imgbb(file_bytes, f"prod_{int(datetime.now().timestamp())}.jpg")
                 if img_url:
-                    await update.message.reply_text("✅ Imagen subida correctamente")
-                else:
-                    await update.message.reply_text("⚠️ No se pudo subir la imagen, continuando sin imagen...")
-                    img_url = ""
+                    await update.message.reply_text("✅ Imagen subida")
             except Exception as e:
-                print(f"Error descargando/subiendo imagen: {e}")
-                await update.message.reply_text("⚠️ Error con la imagen, continuando sin imagen...")
-                img_url = ""
+                print(f"Error: {e}")
+    
+    elif update.message.video:
+        video = update.message.video
+        file = await video.get_file()
+        img_url = file.file_path
+        es_video = True
+        await update.message.reply_text("✅ Video agregado")
+    
+    elif update.message.text:
+        texto = update.message.text.strip()
+        if texto.startswith("http"):
+            img_url = texto
+            es_video = any(ext in texto.lower() for ext in ['.mp4', '.mov', '.webm'])
+    
+    if img_url:
+        if es_video:
+            context.user_data['videos'].append(img_url)
+        elif not context.user_data.get('imagen'):
+            context.user_data['imagen'] = img_url
         else:
-            # Sin ImgBB, informar al usuario
-            await update.message.reply_text(
-                "⚠️ *Imagen no se guardará*\n\n"
-                "Para que las imágenes se vean en el catálogo web:\n"
-                "1. Crea cuenta gratis en imgbb.com\n"
-                "2. Obtén tu API key en api.imgbb.com\n"
-                "3. Agrégala en Render: IMGBB_API_KEY\n\n"
-                "Producto se guardará sin imagen.",
+            context.user_data['imagenes'].append(img_url)
+    
+    keyboard = [
+        [InlineKeyboardButton("📸 Más fotos", callback_data="mas_fotos")],
+        [InlineKeyboardButton("🎬 Agregar video", callback_data="mas_video")],
+        [InlineKeyboardButton("✅ Finalizar", callback_data="finalizar_medios")]
+    ]
+    
+    total = 1 if context.user_data.get('imagen') else 0
+    total += len(context.user_data.get('imagenes', []))
+    total += len(context.user_data.get('videos', []))
+    
+    await update.message.reply_text(
+        f"📷 *Medios: {total}*\n\n¿Agregar más?",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+    return MAS_MEDIOS
+
+async def procesar_mas_medios(update, context):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "finalizar_medios":
+        await query.edit_message_text("✅ Guardando producto...")
+        return await finalizar_producto_callback(query, context)
+    
+    elif query.data in ["mas_fotos", "mas_video"]:
+        tipo = "foto" if query.data == "mas_fotos" else "video"
+        await query.edit_message_text(f"📸 Envía {tipo} (o /saltar para finalizar)")
+        return MAS_MEDIOS
+    
+    return MAS_MEDIOS
+
+async def recibir_mas_medios(update, context):
+    img_url = ""
+    es_video = False
+    
+    if update.message.photo:
+        photo = update.message.photo[-1]
+        file = await photo.get_file()
+        if IMGBB_API_KEY:
+            try:
+                await update.message.reply_text("📤 Subiendo...")
+                file_bytes = await file.download_as_bytearray()
+                img_url = await subir_imagen_imgbb(file_bytes, f"extra_{int(datetime.now().timestamp())}.jpg")
+                if img_url:
+                    await update.message.reply_text("✅ Agregada")
+            except:
+                pass
+    
+    elif update.message.video:
+        file = await update.message.video.get_file()
+        img_url = file.file_path
+        es_video = True
+        await update.message.reply_text("✅ Video agregado")
+    
+    elif update.message.text:
+        texto = update.message.text.strip()
+        if texto.startswith("http"):
+            img_url = texto
+            es_video = any(ext in texto.lower() for ext in ['.mp4', '.mov', '.webm'])
+    
+    if img_url:
+        if es_video:
+            context.user_data.setdefault('videos', []).append(img_url)
+        else:
+            context.user_data.setdefault('imagenes', []).append(img_url)
+    
+    keyboard = [
+        [InlineKeyboardButton("📸 Más fotos", callback_data="mas_fotos")],
+        [InlineKeyboardButton("🎬 Agregar video", callback_data="mas_video")],
+        [InlineKeyboardButton("✅ Finalizar", callback_data="finalizar_medios")]
+    ]
+    
+    total = 1 if context.user_data.get('imagen') else 0
+    total += len(context.user_data.get('imagenes', []))
+    total += len(context.user_data.get('videos', []))
+    
+    await update.message.reply_text(f"📷 *Medios: {total}*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    return MAS_MEDIOS
+
+async def finalizar_producto_callback(query, context):
+    try:
+        temp = context.user_data
+        user = query.from_user
+        
+        producto = {
+            "id": f"producto_{int(datetime.now(timezone.utc).timestamp())}",
+            "nombre": temp.get("nombre", ""),
+            "precio": temp.get("precio", "0"),
+            "descripcion": temp.get("descripcion", ""),
+            "tallas": temp.get("tallas", ""),
+            "categoria": temp.get("categoria", "zapatillas"),
+            "imagen": temp.get("imagen", ""),
+            "imagenes": temp.get("imagenes", []),
+            "videos": temp.get("videos", []),
+            "fecha": datetime.now(timezone.utc).isoformat(),
+            "agregado_por": user.first_name or "Admin"
+        }
+        
+        productos_db[producto["id"]] = producto
+        saved = save_and_push_productos()
+        
+        total = 1 if producto['imagen'] else 0
+        total += len(producto['imagenes']) + len(producto['videos'])
+        
+        if saved:
+            cat_emoji = "👟" if producto['categoria'] == "zapatillas" else "👕"
+            await query.message.reply_text(
+                f"✅ *Producto agregado*\n\n"
+                f"{cat_emoji} *{producto['nombre']}*\n"
+                f"💰 ${format_precio(producto['precio'])}\n"
+                f"📷 {total} medios\n\n"
+                f"🌐 Visible en el catálogo",
                 parse_mode="Markdown"
             )
-            img_url = ""
-    else:
-        # Texto recibido en lugar de foto
-        texto = update.message.text.strip() if update.message.text else ""
-        if texto and texto.startswith("http"):
-            # Es una URL, guardarla directamente
-            img_url = texto
-            await update.message.reply_text("✅ URL de imagen guardada")
-        else:
-            img_url = ""
-    
-    context.user_data['imagen'] = img_url
-    return await finalizar_producto(update, context)
-
-async def saltar(update, context):
-    if 'descripcion' not in context.user_data:
-        context.user_data['descripcion'] = ""
-        await update.message.reply_text("📏 Paso 4/6: Tallas (o /saltar)")
-        return TALLAS
-    if 'tallas' not in context.user_data:
-        context.user_data['tallas'] = ""
-        keyboard = [
-            [InlineKeyboardButton("👟 Zapatillas", callback_data="cat_zapatillas")],
-            [InlineKeyboardButton("👕 Ropa", callback_data="cat_ropa")]
-        ]
-        await update.message.reply_text("🏷️ Paso 5/6: Categoría", reply_markup=InlineKeyboardMarkup(keyboard))
-        return CATEGORIA
-    context.user_data['imagen'] = ""
-    return await finalizar_producto(update, context)
-
-async def cancelar(update, context):
-    context.user_data.clear()
-    await update.message.reply_text("❌ Operación cancelada")
-    return ConversationHandler.END
+        
+        context.user_data.clear()
+        return ConversationHandler.END
+    except Exception as e:
+        await query.message.reply_text(f"❌ Error: {e}")
+        context.user_data.clear()
+        return ConversationHandler.END
 
 async def finalizar_producto(update, context):
     try:
@@ -867,151 +647,4 @@ async def finalizar_producto(update, context):
             "nombre": temp.get("nombre", ""),
             "precio": temp.get("precio", "0"),
             "descripcion": temp.get("descripcion", ""),
-            "tallas": temp.get("tallas", ""),
-            "categoria": temp.get("categoria", "zapatillas"),
-            "imagen": temp.get("imagen", ""),
-            "fecha": datetime.now(timezone.utc).isoformat(),
-            "agregado_por": user.first_name or "Admin"
-        }
-        
-        productos_db[producto["id"]] = producto
-        saved = save_and_push_productos()
-        
-        cat_emoji = "👟" if producto['categoria'] == "zapatillas" else "👕"
-        
-        if saved:
-            await update.message.reply_text(
-                f"✅ *Producto agregado exitosamente*\n\n"
-                f"{cat_emoji} *{producto['nombre']}*\n"
-                f"💰 ${format_precio(producto['precio'])}\n"
-                f"📏 Tallas: {producto['tallas'] or 'N/A'}\n"
-                f"👤 Por: {user.first_name}\n\n"
-                f"🌐 Ya está visible en el catálogo web",
-                parse_mode="Markdown"
-            )
-        else:
-            await update.message.reply_text("⚠️ Error al guardar en GitHub. Revisa los logs.")
-        
-        context.user_data.clear()
-        return ConversationHandler.END
-    except Exception as e:
-        await update.message.reply_text(f"❌ Error: {e}")
-        context.user_data.clear()
-        return ConversationHandler.END
-
-# HEALTH SERVER (ya no es necesario con webhook)
-# run_webhook ya incluye un servidor HTTP completo
-
-# MAIN
-def main():
-    missing = []
-    if not BOT_TOKEN: missing.append("BOT_TOKEN")
-    if not GITHUB_USER: missing.append("GITHUB_USER")
-    if not GITHUB_REPO: missing.append("GITHUB_REPO")
-    if not GITHUB_TOKEN: missing.append("GITHUB_TOKEN")
-    if not ADMIN_IDS: missing.append("ADMIN_IDS")
-    
-    if missing:
-        print(f"❌ Faltan variables: {', '.join(missing)}")
-        print("\n💡 Configura en Render > Environment:")
-        for var in missing:
-            print(f"   • {var}")
-        return
-    
-    # Cargar productos
-    ensure_repo()
-    global productos_db
-    productos_lista = load_productos_from_disk()
-    productos_db = {p.get("id", f"prod_{i}"): p for i, p in enumerate(productos_lista)}
-    
-    # Bot
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    
-    # Comandos básicos
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("ayuda", ayuda))
-    app.add_handler(CommandHandler("listar", listar))
-    app.add_handler(CommandHandler("catalogo", catalogo))
-    app.add_handler(CommandHandler("eliminar", eliminar_comando))
-    
-    # Callbacks para eliminar
-    app.add_handler(CallbackQueryHandler(eliminar_callback, pattern="^del_"))
-    
-    # Conversación para agregar producto
-    conv_agregar = ConversationHandler(
-        entry_points=[CommandHandler("agregar", agregar_inicio)],
-        states={
-            NOMBRE: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_nombre)],
-            PRECIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_precio)],
-            DESCRIPCION: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_descripcion),
-                CommandHandler("saltar", saltar)
-            ],
-            TALLAS: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_tallas),
-                CommandHandler("saltar", saltar)
-            ],
-            CATEGORIA: [CallbackQueryHandler(recibir_categoria, pattern="^cat_")],
-            IMAGEN: [
-                MessageHandler(filters.PHOTO, recibir_imagen),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_imagen),
-                CommandHandler("saltar", saltar)
-            ]
-        },
-        fallbacks=[CommandHandler("cancelar", cancelar)],
-        per_message=False
-    )
-    
-    # Conversación para editar producto
-    conv_editar = ConversationHandler(
-        entry_points=[CommandHandler("editar", editar_comando)],
-        states={
-            EDITAR_CAMPO: [
-                CallbackQueryHandler(editar_seleccionar_campo, pattern="^edit_"),
-                CallbackQueryHandler(editar_pedir_valor, pattern="^editfield_"),
-                CallbackQueryHandler(editar_guardar_categoria, pattern="^editcat_")
-            ],
-            EDITAR_VALOR: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, editar_guardar_valor)
-            ]
-        },
-        fallbacks=[CommandHandler("cancelar", cancelar)],
-        per_message=False
-    )
-    
-    app.add_handler(conv_agregar)
-    app.add_handler(conv_editar)
-    
-    print("🤖 Bot iniciado")
-    print(f"👥 Administradores: {ADMIN_IDS}")
-    print(f"📁 Repositorio: {GITHUB_USER}/{GITHUB_REPO}")
-    print(f"📦 Productos cargados: {len(productos_db)}")
-    
-    # Usar webhook en Render, polling en local
-    RENDER_EXTERNAL_URL = os.getenv('RENDER_EXTERNAL_URL')
-    PORT = int(os.getenv('PORT', 10000))
-    
-    if RENDER_EXTERNAL_URL:
-        # Modo WEBHOOK (Render)
-        print(f"🌐 Modo WEBHOOK en {RENDER_EXTERNAL_URL}")
-        print(f"🩺 Puerto: {PORT}")
-        
-        # Configurar webhook - run_webhook ya incluye el servidor HTTP
-        webhook_url = f"{RENDER_EXTERNAL_URL}/{BOT_TOKEN}"
-        print(f"🔗 Webhook URL: {webhook_url}\n")
-        
-        # run_webhook ya maneja el servidor HTTP completo
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            url_path=BOT_TOKEN,
-            webhook_url=webhook_url,
-            drop_pending_updates=True
-        )
-    else:
-        # Modo POLLING (desarrollo local)
-        print("🔄 Modo POLLING (desarrollo local)\n")
-        app.run_polling(drop_pending_updates=True)
-
-if __name__ == "__main__":
-    main()
+            "tallas": temp.get
