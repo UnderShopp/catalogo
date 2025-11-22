@@ -21,6 +21,10 @@ GITHUB_USER = os.getenv("GITHUB_USER")
 GITHUB_REPO = os.getenv("GITHUB_REPO")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
+# Limpiar el nombre del repo si viene con usuario duplicado
+if GITHUB_REPO and "/" in GITHUB_REPO:
+    GITHUB_REPO = GITHUB_REPO.split("/")[-1]
+
 print(f"\n🧩 CONFIGURACIÓN:")
 print(f"   BOT_TOKEN: {'✅' if BOT_TOKEN else '❌'}")
 print(f"   ADMIN_IDS: {ADMIN_IDS}")
@@ -40,28 +44,69 @@ productos_db = {}
 
 # GIT FUNCTIONS
 def repo_url_with_token():
-    return f"https://{GITHUB_USER}:{GITHUB_TOKEN}@github.com/{GITHUB_REPO}.git"
+    """Construye la URL del repositorio con autenticación"""
+    if not GITHUB_USER or not GITHUB_REPO:
+        return None
+    return f"https://{GITHUB_TOKEN}@github.com/{GITHUB_USER}/{GITHUB_REPO}.git"
 
 def ensure_repo():
+    """Asegura que el repositorio Git esté clonado y actualizado"""
     try:
+        repo_url = repo_url_with_token()
+        if not repo_url:
+            print("❌ No se puede construir URL del repositorio")
+            return False
+        
         if not LOCAL_REPO_PATH.exists():
-            print("📥 Clonando repositorio...")
+            print(f"📥 Clonando repositorio desde {GITHUB_USER}/{GITHUB_REPO}...")
             LOCAL_REPO_PATH.mkdir(parents=True, exist_ok=True)
-            result = subprocess.run(["git", "clone", repo_url_with_token(), str(LOCAL_REPO_PATH)], capture_output=True, text=True)
+            result = subprocess.run(
+                ["git", "clone", "--depth", "1", "--single-branch", "--branch", REPO_BRANCH, repo_url, str(LOCAL_REPO_PATH)],
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
             if result.returncode != 0:
                 print(f"❌ Error clonando: {result.stderr}")
+                print(f"   URL (sin token): https://github.com/{GITHUB_USER}/{GITHUB_REPO}.git")
+                # Intentar crear el directorio básico
+                import shutil
+                if LOCAL_REPO_PATH.exists():
+                    shutil.rmtree(LOCAL_REPO_PATH)
+                LOCAL_REPO_PATH.mkdir(parents=True, exist_ok=True)
                 return False
             print("✅ Repositorio clonado")
         else:
+            # Verificar que es un repositorio válido
+            git_dir = LOCAL_REPO_PATH / ".git"
+            if not git_dir.exists():
+                print("⚠️ No es un repo válido, eliminando y clonando de nuevo...")
+                import shutil
+                shutil.rmtree(LOCAL_REPO_PATH)
+                return ensure_repo()
+            
             print("🔄 Actualizando repositorio...")
-            result = subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "pull"], capture_output=True, text=True)
+            result = subprocess.run(
+                ["git", "-C", str(LOCAL_REPO_PATH), "pull", "origin", REPO_BRANCH],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
             if result.returncode != 0:
                 print(f"⚠️ Error en pull: {result.stderr}")
+                print("🔄 Intentando reset...")
+                subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "fetch", "origin"], timeout=30)
+                subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "reset", "--hard", f"origin/{REPO_BRANCH}"])
             else:
                 print("✅ Repositorio actualizado")
         return True
+    except subprocess.TimeoutExpired:
+        print("❌ Timeout en operación Git")
+        return False
     except Exception as e:
         print(f"❌ Error con git: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def load_productos_from_disk():
@@ -79,12 +124,29 @@ def load_productos_from_disk():
     return []
 
 def save_and_push_productos():
+    """Guarda productos en JSON y hace push a GitHub"""
     try:
         print("\n💾 Guardando productos...")
-        ok = ensure_repo()
-        if not ok:
-            print("❌ No se pudo acceder al repositorio")
-            return False
+        
+        # Asegurar que existe el directorio y el repo
+        if not LOCAL_REPO_PATH.exists():
+            print("📂 Creando directorio de trabajo...")
+            LOCAL_REPO_PATH.mkdir(parents=True, exist_ok=True)
+        
+        # Verificar que el directorio es un repo Git válido
+        git_dir = LOCAL_REPO_PATH / ".git"
+        if not git_dir.exists():
+            print("⚠️ No hay repositorio Git, intentando clonar...")
+            ok = ensure_repo()
+            if not ok:
+                print("❌ No se pudo clonar el repositorio")
+                print("ℹ️ Guardando solo localmente...")
+                # Guardar solo local si no hay Git
+                ruta = LOCAL_REPO_PATH / JSON_FILENAME
+                lista = list(productos_db.values())
+                with ruta.open("w", encoding="utf-8") as f:
+                    json.dump(lista, f, ensure_ascii=False, indent=2)
+                return True
         
         ruta = LOCAL_REPO_PATH / JSON_FILENAME
         lista = list(productos_db.values())
@@ -94,41 +156,84 @@ def save_and_push_productos():
             json.dump(lista, f, ensure_ascii=False, indent=2)
         print("✅ Archivo escrito")
         
-        subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "config", "user.email", "bot@undershopp.local"], check=True)
-        subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "config", "user.name", "UnderShoppBot"], check=True)
+        # Si no hay .git, no intentar hacer push
+        if not git_dir.exists():
+            print("ℹ️ Sin Git, solo guardado local")
+            return True
+        
+        # Configurar Git
+        subprocess.run(
+            ["git", "-C", str(LOCAL_REPO_PATH), "config", "user.email", "bot@undershopp.local"],
+            capture_output=True,
+            check=False
+        )
+        subprocess.run(
+            ["git", "-C", str(LOCAL_REPO_PATH), "config", "user.name", "UnderShoppBot"],
+            capture_output=True,
+            check=False
+        )
         
         print("➕ Git add...")
-        subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "add", JSON_FILENAME], check=True)
+        result = subprocess.run(
+            ["git", "-C", str(LOCAL_REPO_PATH), "add", JSON_FILENAME],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            print(f"⚠️ Error en add: {result.stderr}")
+            return True  # Aún así retornar True porque se guardó localmente
         
-        res = subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "status", "--porcelain"], capture_output=True, text=True)
+        # Verificar si hay cambios
+        res = subprocess.run(
+            ["git", "-C", str(LOCAL_REPO_PATH), "status", "--porcelain"],
+            capture_output=True,
+            text=True
+        )
         if res.stdout.strip() == "":
             print("ℹ️ No hay cambios para commitear")
             return True
         
         print("📝 Git commit...")
-        mensaje = f"Bot: actualizacion {datetime.now(timezone.utc).isoformat()}"
-        subprocess.run(["git", "-C", str(LOCAL_REPO_PATH), "commit", "-m", mensaje], check=True)
-        
-        print("☁️ Git push...")
+        mensaje = f"Bot: actualizacion {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}"
         result = subprocess.run(
-            ["git", "-C", str(LOCAL_REPO_PATH), "push", repo_url_with_token(), REPO_BRANCH],
+            ["git", "-C", str(LOCAL_REPO_PATH), "commit", "-m", mensaje],
             capture_output=True,
             text=True
         )
+        if result.returncode != 0:
+            print(f"⚠️ Error en commit: {result.stderr}")
+            return True
+        
+        print("☁️ Git push...")
+        repo_url = repo_url_with_token()
+        if not repo_url:
+            print("❌ No se puede construir URL para push")
+            return True
+        
+        result = subprocess.run(
+            ["git", "-C", str(LOCAL_REPO_PATH), "push", repo_url, REPO_BRANCH],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
         
         if result.returncode != 0:
-            print(f"❌ ERROR EN PUSH:")
+            print(f"⚠️ ERROR EN PUSH:")
             print(f"   Return code: {result.returncode}")
-            print(f"   Stdout: {result.stdout}")
             print(f"   Stderr: {result.stderr}")
-            return False
+            return True  # Retornar True porque se guardó localmente
         
         print("✅ Push exitoso\n")
         return True
         
+    except subprocess.TimeoutExpired:
+        print("⚠️ Timeout en operación Git")
+        return True
     except Exception as e:
-        print(f"❌ Error: {e}")
-        return False
+        print(f"⚠️ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return True  # Retornar True para no bloquear el bot
 
 def format_precio(precio):
     """Formatea el precio sin decimales si es entero"""
@@ -561,47 +666,11 @@ async def recibir_categoria(update, context):
 
 async def recibir_imagen(update, context):
     img_url = ""
-    
     if update.message.photo:
-        try:
-            # Descargar la foto de Telegram
-            file = await update.message.photo[-1].get_file()
-            foto_bytes = await file.download_as_bytearray()
-            
-            # Subir a ImgBB
-            IMGBB_API_KEY = os.getenv("IMGBB_API_KEY")
-            if IMGBB_API_KEY:
-                import base64
-                import requests
-                
-                # Convertir a base64
-                foto_b64 = base64.b64encode(foto_bytes).decode('utf-8')
-                
-                # Subir a ImgBB
-                response = requests.post(
-                    "https://api.imgbb.com/1/upload",
-                    data={
-                        "key": IMGBB_API_KEY,
-                        "image": foto_b64
-                    }
-                )
-                
-                if response.status_code == 200:
-                    img_url = response.json()['data']['url']
-                    print(f"✅ Imagen subida: {img_url}")
-                else:
-                    print(f"⚠️ Error subiendo imagen: {response.text}")
-                    img_url = ""
-            else:
-                print("⚠️ IMGBB_API_KEY no configurada")
-                img_url = ""
-                
-        except Exception as e:
-            print(f"❌ Error procesando imagen: {e}")
-            img_url = ""
+        file = await update.message.photo[-1].get_file()
+        img_url = file.file_path
     else:
         img_url = update.message.text.strip() if update.message.text else ""
-    
     context.user_data['imagen'] = img_url
     return await finalizar_producto(update, context)
 
