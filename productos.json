@@ -9,6 +9,17 @@
     "imagen": "https://i.ibb.co/8nHJWyLp/IMG-20251106-WA0045.jpg",
     "fecha": "2025-11-12T22:37:18.579693+00:00"
   },
+    {
+    "id": "producto_1763081115",
+    "nombre": "Lv Skate Negra Perlas",
+    "precio": "250000",
+    "descripcion": "Envío Gratis 🚚",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://i.ibb.co/LX42vpvW/IMG-20251107-WA0088.jpg",
+    "fecha": "2025-11-14T00:45:15.984716+00:00",
+    "agregado_por": "S"
+  },
   {
     "id": "producto_1763000058",
     "nombre": "Lv Skate Blanca Beige",
@@ -100,17 +111,6 @@
     "categoria": "zapatillas",
     "imagen": "https://i.ibb.co/Z77v2Pf/IMG-20251116-WA0126.jpg",
     "fecha": "2025-11-14T00:37:02.539686+00:00",
-    "agregado_por": "S"
-  },
-  {
-    "id": "producto_1763081115",
-    "nombre": "Lv Skate Negra Perlas",
-    "precio": "250000",
-    "descripcion": "Envío Gratis 🚚",
-    "tallas": "",
-    "categoria": "zapatillas",
-    "imagen": "https://i.ibb.co/LX42vpvW/IMG-20251107-WA0088.jpg",
-    "fecha": "2025-11-14T00:45:15.984716+00:00",
     "agregado_por": "S"
   },
   {
