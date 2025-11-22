@@ -21,6 +21,22 @@
     "agregado_por": "S"
   },
   {
+      "id": "producto_1763787501",
+    "nombre": "Asics",
+    "precio": "190000",
+    "descripcion": "Envío Gratis🚚",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://i.ibb.co/0pH23Mh2/img-jpg.jpg",
+    "imagenes": [
+      "https://i.ibb.co/CpnBZwVc/img-jpg.jpg",
+      "https://i.ibb.co/MxFFRW1y/img-jpg.jpg"
+    ],
+    "videos": [],
+    "fecha": "2025-11-22T04:58:21.226076+00:00",
+    "agregado_por": "S"
+  },
+  {
     "id": "producto_1763001380",
     "nombre": "LV Skate Azul",
     "precio": "180000",
@@ -227,22 +243,6 @@
     "categoria": "zapatillas",
     "imagen": "https://i.ibb.co/rfwFSPJS/producto-1763784761-jpg.jpg",
     "fecha": "2025-11-22T04:12:42.840338+00:00",
-    "agregado_por": "S"
-  },
-  {
-    "id": "producto_1763787501",
-    "nombre": "Asics",
-    "precio": "190000",
-    "descripcion": "Envío Gratis🚚",
-    "tallas": "",
-    "categoria": "zapatillas",
-    "imagen": "https://i.ibb.co/0pH23Mh2/img-jpg.jpg",
-    "imagenes": [
-      "https://i.ibb.co/CpnBZwVc/img-jpg.jpg",
-      "https://i.ibb.co/MxFFRW1y/img-jpg.jpg"
-    ],
-    "videos": [],
-    "fecha": "2025-11-22T04:58:21.226076+00:00",
     "agregado_por": "S"
   },
   {
