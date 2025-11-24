@@ -9,7 +9,7 @@
     "imagen": "https://i.ibb.co/8nHJWyLp/IMG-20251106-WA0045.jpg",
     "fecha": "2025-11-12T22:37:18.579693+00:00"
   },
-    {
+  {
     "id": "producto_1763081115",
     "nombre": "Lv Skate Negra Perlas",
     "precio": "250000",
@@ -32,7 +32,7 @@
     "agregado_por": "S"
   },
   {
-      "id": "producto_1763787501",
+    "id": "producto_1763787501",
     "nombre": "Asics",
     "precio": "190000",
     "descripcion": "Envío Gratis🚚",
@@ -260,5 +260,21 @@
     "videos": [],
     "fecha": "2025-11-22T04:59:40.703304+00:00",
     "agregado_por": "Nicolas"
+  },
+  {
+    "id": "producto_1764023834",
+    "nombre": "Hoodie Y2K Dólar Gris",
+    "precio": "140000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "ropa",
+    "imagen": "https://i.ibb.co/gZkf2rMf/img-jpg.jpg",
+    "imagenes": [
+      "https://i.ibb.co/xtJ45Dfy/img-jpg.jpg",
+      "https://i.ibb.co/S4P2TYMt/img-jpg.jpg"
+    ],
+    "videos": [],
+    "fecha": "2025-11-24T22:37:14.482380+00:00",
+    "agregado_por": "S"
   }
 ]
