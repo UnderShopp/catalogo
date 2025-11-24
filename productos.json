@@ -276,5 +276,20 @@
     "videos": [],
     "fecha": "2025-11-24T22:37:14.482380+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1764023869",
+    "nombre": "Hoodie Y2K Dólar Negro",
+    "precio": "140000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "ropa",
+    "imagen": "https://i.ibb.co/mrdc0PvF/img-jpg.jpg",
+    "imagenes": [
+      "https://i.ibb.co/ZzRh8Bsp/img-jpg.jpg"
+    ],
+    "videos": [],
+    "fecha": "2025-11-24T22:37:49.408932+00:00",
+    "agregado_por": "S"
   }
 ]
