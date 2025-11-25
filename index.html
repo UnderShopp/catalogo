@@ -129,8 +129,11 @@
 
   <script>
   const CONFIG = { whatsappNumbers: ['573214885822', '573004429451', '573212694280'], autoRefreshSeconds: 30 };
-  let allProducts = [], filteredProducts = [], currentCategory = 'todos', currentPhoneIndex = 0;
+  let allProducts = [], filteredProducts = [], currentCategory = 'todos';
   let modalMedia = [], modalIndex = 0;
+  
+  // Inicializar índice único por sesión basado en timestamp
+  let sessionPhoneIndex = Math.floor(Date.now() / 1000) % CONFIG.whatsappNumbers.length;
 
   document.addEventListener('DOMContentLoaded', async () => { await loadProducts(); setupSearch(); startAutoRefresh(); });
 
@@ -257,7 +260,12 @@
   function showEmptyState() { document.getElementById('productsGrid').innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><h2>Catálogo vacío</h2><p>Pronto agregaremos productos nuevos.</p></div>`; }
   function filterCategory(cat, e) { currentCategory = cat; document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); filteredProducts = cat === 'todos' ? allProducts : allProducts.filter(p => (p.categoria || '').toLowerCase() === cat.toLowerCase()); renderProducts(); }
   function setupSearch() { document.getElementById('searchInput').addEventListener('input', e => { const t = e.target.value.toLowerCase(); filteredProducts = allProducts.filter(p => p.nombre.toLowerCase().includes(t) || (p.descripcion && p.descripcion.toLowerCase().includes(t))); renderProducts(); }); }
-  function getNextPhone() { const p = CONFIG.whatsappNumbers[currentPhoneIndex]; currentPhoneIndex = (currentPhoneIndex + 1) % CONFIG.whatsappNumbers.length; return p; }
+  function getNextPhone() { 
+    // Usar el índice de sesión y rotarlo
+    const phone = CONFIG.whatsappNumbers[sessionPhoneIndex]; 
+    sessionPhoneIndex = (sessionPhoneIndex + 1) % CONFIG.whatsappNumbers.length; 
+    return phone; 
+  }
   function consultarProducto(n, p, t) { const phone = getNextPhone(); const msg = `¡Hola! Estoy interesado en *${n}*.\nPrecio: ${formatPrice(p)}${t ? `\nTallas: ${t}` : ''}\n¿Está disponible?`; window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank'); }
   function contactarVendedor(e) { e.preventDefault(); const phone = getNextPhone(); window.open(`https://wa.me/${phone}?text=${encodeURIComponent('¡Hola! Vi su catálogo y quiero más información.')}`, '_blank'); }
   function startAutoRefresh() { setInterval(loadProducts, CONFIG.autoRefreshSeconds * 1000); }
