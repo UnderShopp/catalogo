@@ -291,5 +291,18 @@
     "videos": [],
     "fecha": "2025-11-24T22:37:49.408932+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1764099485",
+    "nombre": "Chaqueta Audi RS F1",
+    "precio": "130000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "ropa",
+    "imagen": "https://i.ibb.co/03BTSVv/img-jpg.jpg",
+    "imagenes": [],
+    "videos": [],
+    "fecha": "2025-11-25T19:38:05.168963+00:00",
+    "agregado_por": "S"
   }
 ]
