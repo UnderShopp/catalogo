@@ -132,8 +132,8 @@
   let allProducts = [], filteredProducts = [], currentCategory = 'todos';
   let modalMedia = [], modalIndex = 0;
   
-  // Inicializar índice único por sesión basado en timestamp
-  let sessionPhoneIndex = Math.floor(Date.now() / 1000) % CONFIG.whatsappNumbers.length;
+  // Generar índice aleatorio para cada sesión
+  let sessionPhoneIndex = Math.floor(Math.random() * CONFIG.whatsappNumbers.length);
 
   document.addEventListener('DOMContentLoaded', async () => { await loadProducts(); setupSearch(); startAutoRefresh(); });
 
