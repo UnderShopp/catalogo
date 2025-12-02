@@ -317,5 +317,18 @@
     "videos": [],
     "fecha": "2025-11-25T19:52:22.977394+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1764638111",
+    "nombre": "Bota Timberland",
+    "precio": "230000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://i.ibb.co/bMj3bPKn/img-jpg.jpg",
+    "imagenes": [],
+    "videos": [],
+    "fecha": "2025-12-02T01:15:11.574942+00:00",
+    "agregado_por": "S"
   }
 ]
