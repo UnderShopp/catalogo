@@ -407,5 +407,23 @@
     "videos": [],
     "fecha": "2025-12-17T19:33:22.392727+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1766001919",
+    "nombre": "Nike Air Max",
+    "precio": "150000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://i.ibb.co/qFcr0SFV/img-jpg.jpg",
+    "imagenes": [
+      "https://i.ibb.co/hFBnsWXt/img-jpg.jpg",
+      "https://i.ibb.co/RkJz8cm3/img-jpg.jpg",
+      "https://i.ibb.co/Q7nCBj6x/img-jpg.jpg",
+      "https://i.ibb.co/JF5cgQmd/img-jpg.jpg"
+    ],
+    "videos": [],
+    "fecha": "2025-12-17T20:05:19.674222+00:00",
+    "agregado_por": "S"
   }
 ]
