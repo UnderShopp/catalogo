@@ -330,5 +330,23 @@
     "videos": [],
     "fecha": "2025-12-02T01:15:11.574942+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1765998971",
+    "nombre": "Asics",
+    "precio": "190000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://i.ibb.co/N6QpfsSy/img-jpg.jpg",
+    "imagenes": [
+      "https://i.ibb.co/1fpSVTg6/img-jpg.jpg",
+      "https://i.ibb.co/xtJyDG4j/img-jpg.jpg",
+      "https://i.ibb.co/sJkVFSZG/img-jpg.jpg",
+      "https://i.ibb.co/j9XLBv0M/img-jpg.jpg"
+    ],
+    "videos": [],
+    "fecha": "2025-12-17T19:16:11.504075+00:00",
+    "agregado_por": "S"
   }
 ]
