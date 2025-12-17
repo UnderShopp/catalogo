@@ -425,5 +425,22 @@
     "videos": [],
     "fecha": "2025-12-17T20:05:19.674222+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1766001982",
+    "nombre": "Adizero",
+    "precio": "160000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://i.ibb.co/4gVRjVBR/img-jpg.jpg",
+    "imagenes": [
+      "https://i.ibb.co/6RH16qZq/img-jpg.jpg",
+      "https://i.ibb.co/9H4P6Ds1/img-jpg.jpg",
+      "https://i.ibb.co/V06Q3QjF/img-jpg.jpg"
+    ],
+    "videos": [],
+    "fecha": "2025-12-17T20:06:22.271957+00:00",
+    "agregado_por": "S"
   }
 ]
