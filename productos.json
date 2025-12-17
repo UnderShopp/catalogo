@@ -376,5 +376,20 @@
     "videos": [],
     "fecha": "2025-12-17T19:24:19.777436+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1765999558",
+    "nombre": "Adidas Yezzy 700 V3",
+    "precio": "170000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://i.ibb.co/YBdVRM75/img-jpg.jpg",
+    "imagenes": [
+      "https://i.ibb.co/zVKYpvHC/img-jpg.jpg"
+    ],
+    "videos": [],
+    "fecha": "2025-12-17T19:25:58.515289+00:00",
+    "agregado_por": "S"
   }
 ]
