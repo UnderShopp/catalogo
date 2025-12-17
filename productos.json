@@ -348,5 +348,20 @@
     "videos": [],
     "fecha": "2025-12-17T19:16:11.504075+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1765999239",
+    "nombre": "Adidas Súper Star Blessd",
+    "precio": "150000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://i.ibb.co/QjXvJ5rq/img-jpg.jpg",
+    "imagenes": [
+      "https://i.ibb.co/5XQJWQtH/img-jpg.jpg"
+    ],
+    "videos": [],
+    "fecha": "2025-12-17T19:20:39.169403+00:00",
+    "agregado_por": "S"
   }
 ]
