@@ -363,5 +363,18 @@
     "videos": [],
     "fecha": "2025-12-17T19:20:39.169403+00:00",
     "agregado_por": "S"
+  },
+  {
+    "id": "producto_1765999459",
+    "nombre": "Jordan Cereza",
+    "precio": "160000",
+    "descripcion": "",
+    "tallas": "",
+    "categoria": "zapatillas",
+    "imagen": "https://i.ibb.co/WZWxMmz/img-jpg.jpg",
+    "imagenes": [],
+    "videos": [],
+    "fecha": "2025-12-17T19:24:19.777436+00:00",
+    "agregado_por": "S"
   }
 ]
